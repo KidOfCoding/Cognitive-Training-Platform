@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dynamic Memory Path — Cognitive Grid Assessment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/game_demo.css">
+    <style>
+        :root {
+            --accent-cyan: #38bdf8;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-purple: #c084fc;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            touch-action: manipulation;
+            background: radial-gradient(circle at 50% 15%, #0f172a 0%, #030712 100%);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #e2e8f0;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Ambient Glow Backdrop */
+        .ambient-glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.06) 0%, rgba(99, 102, 241, 0.03) 50%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Grid Board Section */
+        .board-wrapper {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        .grid-frame {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1.5px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 12px;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        #grid {
+            display: grid;
+            aspect-ratio: 1 / 1;
+            gap: 6px;
+            position: relative;
+        }
+
+        /* Cell Visual Styles */
+        .cell-transition {
+            transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 3px 6px rgba(0, 0, 0, 0.35);
+        }
+
+        .cell-default {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .cell-default:hover {
+            background: rgba(51, 65, 85, 0.95);
+            border-color: rgba(56, 189, 248, 0.5);
+            transform: scale(1.02);
+            z-index: 5;
+        }
+
+        /* Luminous Player Avatar */
+        .cell-player {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+            border: 2px solid #38bdf8 !important;
+            box-shadow: 0 0 24px rgba(56, 189, 248, 0.85), inset 0 0 12px rgba(56, 189, 248, 0.5) !important;
+            transform: scale(1.04);
+            z-index: 10;
+            animation: player-pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes player-pulse {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(56, 189, 248, 0.75), inset 0 0 10px rgba(56, 189, 248, 0.4);
+                transform: scale(1.03);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(56, 189, 248, 1), inset 0 0 14px rgba(56, 189, 248, 0.7);
+                transform: scale(1.06);
+            }
+        }
+
+        .player-avatar-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #ffffff;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+        }
+
+        /* Luminous Key Vault Cell */
+        .key-cell-active {
+            background: radial-gradient(circle, rgba(45, 30, 10, 0.95) 0%, rgba(15, 23, 42, 1) 100%) !important;
+            border: 2px solid #f59e0b !important;
+            box-shadow: 0 0 24px rgba(245, 158, 11, 0.85), inset 0 0 10px rgba(245, 158, 11, 0.35) !important;
+            animation: key-pulse 1.8s infinite alternate ease-in-out;
+            z-index: 8;
+        }
+
+        @keyframes key-pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 16px rgba(245, 158, 11, 0.6);
+            }
+            100% {
+                transform: scale(1.06);
+                box-shadow: 0 0 28px rgba(245, 158, 11, 1);
+            }
+        }
+
+        .key-glow-emoji {
+            font-size: 1.5rem;
+            filter: drop-shadow(0 0 8px #f59e0b) drop-shadow(0 0 2px #ffffff);
+            display: inline-block;
+            animation: bounce-slight 2s infinite ease-in-out;
+        }
+
+        @keyframes bounce-slight {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-2px); }
+        }
+
+        /* Amethyst Exit Goal */
+        .cell-goal {
+            background: linear-gradient(135deg, #7e22ce 0%, #581c87 100%) !important;
+            border: 2px solid #c084fc !important;
+            box-shadow: 0 0 24px rgba(192, 132, 252, 0.85), inset 0 0 10px rgba(192, 132, 252, 0.4) !important;
+            animation: goal-pulse 2s infinite alternate ease-in-out;
+            z-index: 8;
+        }
+
+        @keyframes goal-pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 16px rgba(192, 132, 252, 0.6);
+            }
+            100% {
+                transform: scale(1.05);
+                box-shadow: 0 0 28px rgba(192, 132, 252, 1);
+            }
+        }
+
+        .goal-glow-emoji {
+            font-size: 1.5rem;
+            filter: drop-shadow(0 0 8px #c084fc) drop-shadow(0 0 2px #ffffff);
+            display: inline-block;
+        }
+
+        /* Visited Emerald Trail */
+        .cell-visited {
+            background: rgba(16, 185, 129, 0.28) !important;
+            border: 1.5px solid #10b981 !important;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.45) !important;
+        }
+
+        .visited-node-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #34d399;
+            box-shadow: 0 0 8px 3px rgba(52, 211, 153, 0.9);
+            display: inline-block;
+        }
+
+        /* Hit Hidden Wall Shake & Flash */
+        .hit-wall-flash {
+            animation: wall-shake 0.35s ease-in-out;
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 35px rgba(239, 68, 68, 0.9) !important;
+        }
+
+        @keyframes wall-shake {
+            0%, 100% { transform: translate(0, 0); }
+            20% { transform: translate(-6px, 0); }
+            40% { transform: translate(6px, 0); }
+            60% { transform: translate(-4px, 0); }
+            80% { transform: translate(4px, 0); }
+        }
+
+        /* Action Toolbar Buttons */
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 13px 16px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 14px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+        }
+
+        .action-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+
+        .action-btn:active:not(:disabled) {
+            transform: scale(0.97);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none;
+        }
+
+        .btn-new {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            border-color: rgba(56, 189, 248, 0.4);
+        }
+        .btn-new:hover:not(:disabled) {
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.55);
+        }
+
+        /* Directional D-Pad Controllers */
+        .dpad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 56px);
+            grid-template-rows: repeat(3, 52px);
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+
+        .dpad-btn {
+            width: 56px;
+            height: 52px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 14px;
+            color: #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .dpad-btn:hover {
+            background: rgba(56, 189, 248, 0.22);
+            border-color: #38bdf8;
+            color: #38bdf8;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
+            transform: translateY(-1px);
+        }
+
+        .dpad-btn:active {
+            transform: scale(0.94);
+            background: rgba(56, 189, 248, 0.35);
+            border-color: #38bdf8;
+            color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.6);
+        }
+
+        .dpad-center-hub {
+            width: 56px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(56, 189, 248, 0.4);
+            border-radius: 14px;
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px dashed rgba(255, 255, 255, 0.08);
+        }
+
+        .kbd-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            line-height: 1;
+            padding: 2px 4px;
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            margin-top: 2px;
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(3, 7, 18, 0.85);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: rgba(15, 23, 42, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.85), 0 0 40px rgba(56, 189, 248, 0.2);
+            text-align: center;
+            max-width: 420px;
+            width: 90%;
+        }
+
+        /* Layout & Responsiveness */
+        body {
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-layout {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            height: 100vh;
+            padding: 8px 14px;
+            gap: 16px;
+            align-items: center;
+            justify-content: space-between;
+            box-sizing: border-box;
+        }
+
+        .board-section {
+            flex: 1 1 auto;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+            min-height: 0;
+        }
+
+        .board-wrapper {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .grid-frame {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1.5px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 10px;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-height: 100%;
+            max-width: 100%;
+        }
+
+        #grid {
+            display: grid;
+            aspect-ratio: 1 / 1;
+            width: min(calc(100vh - 28px), calc(100vw - 365px), 780px);
+            height: min(calc(100vh - 28px), calc(100vw - 365px), 780px);
+            gap: 6px;
+            position: relative;
+        }
+
+        .sidebar-controls {
+            width: 345px;
+            max-width: 350px;
+            flex-shrink: 0;
+            height: calc(100vh - 16px);
+            max-height: calc(100vh - 16px);
+            display: flex;
+            flex-direction: column;
+            background: rgba(15, 23, 42, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 12px 14px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+
+        .sidebar-controls::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sidebar-controls::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.35);
+            border-radius: 4px;
+        }
+
+        .dpad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 48px);
+            grid-template-rows: repeat(3, 42px);
+            gap: 5px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dpad-btn, .dpad-center-hub {
+            width: 48px;
+            height: 42px;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 9px 12px;
+            font-size: 13.5px;
+            font-weight: 700;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+        }
+
+        @media (max-width: 720px) {
+            body {
+                overflow-y: auto;
+                height: auto;
+                min-height: 100vh;
+            }
+            .game-layout {
+                flex-direction: column;
+                height: auto;
+                padding: 8px;
+                gap: 12px;
+            }
+            #grid {
+                width: min(94vw, 420px);
+                height: min(94vw, 420px);
+                gap: 4px;
+            }
+            .grid-frame {
+                padding: 8px;
+                border-radius: 16px;
+            }
+            .sidebar-controls {
+                width: 100%;
+                max-width: 420px;
+                height: auto;
+                max-height: none;
+            }
+        }
+    </style>
+</head>
+
+<body class="text-slate-200">
+
+    <div class="ambient-glow"></div>
+
+    <!-- Main Container: Flex Row on Desktop, Column on Mobile -->
+    <div id="game-container" class="game-layout z-10">
+
+        <!-- Board Area (Main Left on Desktop) -->
+        <div class="board-section">
+            <div id="grid-wrapper" class="board-wrapper">
+                <div class="grid-frame">
+                    <div id="grid">
+                        <!-- Dynamic Grid Cells generated in JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar / Control Panel (Shifted to Side on Desktop) -->
+        <div class="sidebar-controls">
+            <!-- Header (Streamlined to avoid title duplication with parent nav) -->
+            <header class="w-full flex items-center justify-between pb-2 mb-1 border-b border-slate-800/80 flex-shrink-0">
+                <div class="flex items-center gap-2 text-xs text-slate-300 font-medium">
+                    <span class="text-xl flex-shrink-0">🧭</span>
+                    <span class="leading-tight">Memorize walls • Grab Key 🔑 • Reach Flag 🏁</span>
+                </div>
+                <button id="watch-demo-header-btn" type="button" class="demo-launch-btn flex items-center gap-1 py-1 px-2.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-semibold border border-slate-600 transition flex-shrink-0 ml-2">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    <span>Demo</span>
+                </button>
+            </header>
+
+            <!-- HUD: Key Status, Plays Left Badge -->
+            <div class="w-full flex items-center justify-between gap-2 my-2.5">
+                <div id="key-status" class="px-3 py-1.5 rounded-xl font-semibold text-xs tracking-wide bg-slate-900/90 border border-slate-700 text-slate-400 flex items-center gap-1.5 shadow">
+                    <span>🗝️</span> <span>Key: No</span>
+                </div>
+
+                <div id="session-plays-badge" class="px-3 py-1.5 bg-emerald-950/80 border border-emerald-500/40 rounded-xl text-xs text-emerald-400 font-semibold hidden">
+                    Plays: <span id="plays-left-count">-</span>
+                </div>
+            </div>
+
+            <!-- Controls: Size & Difficulty Selectors -->
+            <div class="w-full flex flex-col gap-3 p-3 bg-slate-900/70 rounded-2xl border border-slate-800/80 my-1">
+                <!-- Size Selector -->
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Grid Size:</span>
+                    <div id="size-selector" class="flex gap-1 p-0.5 bg-slate-950/80 rounded-xl border border-slate-800 text-xs">
+                        <button data-size="5" class="px-2.5 py-1 rounded-lg text-white bg-sky-600 font-semibold shadow">5x5</button>
+                        <button data-size="6" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">6x6</button>
+                        <button data-size="7" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">7x7</button>
+                        <button data-size="8" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">8x8</button>
+                    </div>
+                    <!-- Hidden select for full programmatic compatibility -->
+                    <select id="size-select" class="hidden">
+                        <option value="5" selected>5x5</option>
+                        <option value="6">6x6</option>
+                        <option value="7">7x7</option>
+                        <option value="8">8x8</option>
+                    </select>
+                </div>
+
+                <!-- Difficulty Selector -->
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Difficulty:</span>
+                    <div id="difficulty-selector" class="flex gap-1 p-0.5 bg-slate-950/80 rounded-xl border border-slate-800 text-xs">
+                        <button data-diff="easy" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">Easy</button>
+                        <button data-diff="intermediate" class="px-2.5 py-1 rounded-lg text-white bg-sky-600 font-semibold shadow">Medium</button>
+                        <button data-diff="hard" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">Hard</button>
+                    </div>
+                    <!-- Hidden select for full programmatic compatibility -->
+                    <select id="difficulty-select" class="hidden">
+                        <option value="easy">Easy</option>
+                        <option value="intermediate" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- New Level Button -->
+            <button id="new-level-button" class="action-btn btn-new mt-2">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Start New Level</span>
+            </button>
+
+            <!-- Directional Gaming D-Pad (Positioned in Sidebar) -->
+            <div id="mobile-dpad" class="w-full flex flex-col items-center justify-center p-3 bg-slate-900/60 rounded-2xl border border-slate-800/80 mt-3 select-none">
+                <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Directional Controls</div>
+                <div class="dpad-grid">
+                    <!-- Row 1: Up -->
+                    <div></div>
+                    <button type="button" id="btn-touch-up" class="dpad-btn" aria-label="Move Up">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                        <span class="kbd-badge">W</span>
+                    </button>
+                    <div></div>
+
+                    <!-- Row 2: Left, Center Hub, Right -->
+                    <button type="button" id="btn-touch-left" class="dpad-btn" aria-label="Move Left">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                        <span class="kbd-badge">A</span>
+                    </button>
+                    <div class="dpad-center-hub">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>
+                    </div>
+                    <button type="button" id="btn-touch-right" class="dpad-btn" aria-label="Move Right">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                        <span class="kbd-badge">D</span>
+                    </button>
+
+                    <!-- Row 3: Down -->
+                    <div></div>
+                    <button type="button" id="btn-touch-down" class="dpad-btn" aria-label="Move Down">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        <span class="kbd-badge">S</span>
+                    </button>
+                    <div></div>
+                </div>
+            </div>
+
+            <!-- Status Box -->
+            <div id="message-box" class="min-h-[44px] mt-3 flex items-center justify-center bg-slate-900/60 rounded-xl border border-slate-800 p-2">
+                <p id="status-text" class="text-sm font-semibold tracking-wide text-center text-cyan-300"></p>
+            </div>
+            <p class="text-[12px] text-slate-400 text-center mt-2">💡 Navigate using D-Pad, Arrow keys (↑ ↓ ← →), or WASD.</p>
+        </div>
+    </div>
+
+    <!-- Recharge Notice Modal (When out of chances) -->
+    <div id="recharge-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="text-4xl mb-3">⚡</div>
+            <h2 class="text-xl font-bold text-white mb-2">No Plays Available</h2>
+            <p id="recharge-notice-text" class="text-slate-300 text-sm mb-6">You have exhausted all chances for Dynamic Memory Path. Please recharge your account to start a new level!</p>
+            <div class="flex justify-center gap-4">
+                <button id="recharge-modal-close" class="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-semibold text-sm rounded-xl shadow transition">Got It</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Demo Engine -->
+    <script src="/shared/game_demo.js"></script>
+
+    <script>
+        // --- DOM ELEMENTS ---
+        const gameContainer = document.getElementById('game-container');
+        const gridWrapper = document.getElementById('grid-wrapper');
+        const gridElement = document.getElementById('grid');
+        const sizeSelect = document.getElementById('size-select');
+        const difficultySelect = document.getElementById('difficulty-select');
+        const statusTextElement = document.getElementById('status-text');
+        const keyStatusElement = document.getElementById('key-status');
+        const newLevelButton = document.getElementById('new-level-button');
+        const watchDemoHeaderBtn = document.getElementById('watch-demo-header-btn');
+        const sessionPlaysBadge = document.getElementById('session-plays-badge');
+        const playsLeftCount = document.getElementById('plays-left-count');
+        const rechargeModal = document.getElementById('recharge-modal');
+        const rechargeModalClose = document.getElementById('recharge-modal-close');
+        const rechargeNoticeText = document.getElementById('recharge-notice-text');
+        const sizeButtons = document.querySelectorAll('#size-selector button');
+        const diffButtons = document.querySelectorAll('#difficulty-selector button');
+
+        // If running standalone (not in parent frame), show title in banner
+        if (window.self === window.top) {
+            const headerEl = document.querySelector('.sidebar-controls header');
+            if (headerEl) {
+                const standaloneTitle = document.createElement('h1');
+                standaloneTitle.className = 'text-lg font-bold text-white mb-1';
+                standaloneTitle.textContent = 'Dynamic Memory Path';
+                headerEl.prepend(standaloneTitle);
+            }
+        }
+
+        // --- STATE VARIABLES ---
+        let size, difficulty, player, keyPos, goal, walls, hasKey, visited, status;
+        let isGameActive = false;
+        let demoInstance = null;
+
+        // Audio synthesizer helper
+        let audioCtx = null;
+        function playChime(freq = 440, type = 'sine', duration = 0.15) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        // Listen for session info from parent window
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'GAME_SESSION_INFO') {
+                if (e.data.totalChances !== undefined && sessionPlaysBadge && playsLeftCount) {
+                    playsLeftCount.textContent = e.data.totalChances;
+                    sessionPlaysBadge.classList.remove('hidden');
+                }
+            }
+        });
+        try { window.parent.postMessage({ type: 'GET_GAME_SESSION_INFO' }, '*'); } catch (e) {}
+
+        function showNoChancesNotice(msg) {
+            if (rechargeNoticeText) {
+                rechargeNoticeText.textContent = msg || 'You have exhausted your available plays. Please recharge!';
+            }
+            rechargeModal.classList.add('active');
+        }
+
+        rechargeModalClose.addEventListener('click', () => {
+            rechargeModal.classList.remove('active');
+        });
+
+        // --- RENDER FUNCTION ---
+        function render() {
+            gridElement.innerHTML = '';
+            gridElement.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+            gridElement.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+
+            for (let i = 0; i < size * size; i++) {
+                const x = i % size;
+                const y = Math.floor(i / size);
+                const isPlayer = player.x === x && player.y === y;
+                const isKey = keyPos.x === x && keyPos.y === y && !hasKey;
+                const isGoal = goal.x === x && goal.y === y;
+                const isVisited = visited[y]?.[x];
+
+                let cellClass = "cell-default";
+                let content = "";
+
+                if (isPlayer) {
+                    cellClass = "cell-player";
+                    content = '<div class="player-avatar-badge">P</div>';
+                } else if (isKey) {
+                    // Highly luminous, obsidian & gold key vault cell with glowing emoji
+                    cellClass = "key-cell-active";
+                    content = '<span class="key-glow-emoji">🔑</span>';
+                } else if (isGoal) {
+                    cellClass = "cell-goal";
+                    content = '<span class="goal-glow-emoji">🏁</span>';
+                } else if (isVisited) {
+                    cellClass = "cell-visited";
+                    content = '<span class="visited-node-dot"></span>';
+                }
+
+                const cell = document.createElement('div');
+                cell.className = `cell-transition ${cellClass}`;
+                cell.innerHTML = content;
+                gridElement.appendChild(cell);
+            }
+
+            statusTextElement.textContent = status;
+            if (hasKey) {
+                keyStatusElement.className = "px-3 py-1.5 rounded-xl font-semibold text-xs tracking-wide bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 flex items-center gap-1.5 shadow-md shadow-emerald-900/30";
+                keyStatusElement.innerHTML = "<span>🔑</span> <span>Key: YES</span>";
+            } else {
+                keyStatusElement.className = "px-3 py-1.5 rounded-xl font-semibold text-xs tracking-wide bg-slate-900/90 border border-slate-700 text-slate-400 flex items-center gap-1.5 shadow";
+                keyStatusElement.innerHTML = "<span>🗝️</span> <span>Key: No</span>";
+            }
+        }
+
+        // --- GAME LOGIC & SOLVABILITY VALIDATOR ---
+        function hasPath(start, target, wallList, gridSize) {
+            const isBlocked = (x, y) => wallList.some(w => w.x === x && w.y === y);
+            const queue = [{ x: start.x, y: start.y }];
+            const seen = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
+            seen[start.y][start.x] = true;
+
+            const dirs = [
+                { dx: 0, dy: -1 },
+                { dx: 0, dy: 1 },
+                { dx: -1, dy: 0 },
+                { dx: 1, dy: 0 }
+            ];
+
+            while (queue.length > 0) {
+                const { x, y } = queue.shift();
+                if (x === target.x && y === target.y) return true;
+
+                for (const { dx, dy } of dirs) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize && !seen[ny][nx] && !isBlocked(nx, ny)) {
+                        seen[ny][nx] = true;
+                        queue.push({ x: nx, y: ny });
+                    }
+                }
+            }
+            return false;
+        }
+
+        function generateLevel() {
+            size = Number(sizeSelect.value);
+            difficulty = difficultySelect.value;
+
+            const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+            const difficultyMap = {
+                easy: { min: Math.floor(size / 2), max: Math.floor(size) },
+                intermediate: { min: Math.floor(size * 1.2), max: Math.floor(size * 1.8) },
+                hard: { min: Math.floor(size * 2), max: Math.floor(size * 2.5) },
+            };
+            const wallRange = difficultyMap[difficulty] || difficultyMap.intermediate;
+
+            let newKey;
+            do {
+                newKey = { x: rand(0, size - 1), y: rand(0, size - 1) };
+            } while ((newKey.x === 0 && newKey.y === 0) || (newKey.x === size - 1 && newKey.y === size - 1));
+            keyPos = newKey;
+            goal = { x: size - 1, y: size - 1 };
+
+            // Generate walls with strict BFS solvability guarantee
+            let newWalls = [];
+            let attempts = 0;
+            const targetWallCount = rand(wallRange.min, wallRange.max);
+
+            do {
+                attempts++;
+                newWalls = [];
+                const effectiveWallCount = Math.max(1, targetWallCount - Math.floor(attempts / 25));
+
+                while (newWalls.length < effectiveWallCount) {
+                    const wx = rand(0, size - 1);
+                    const wy = rand(0, size - 1);
+                    if ((wx === 0 && wy === 0) || (wx === keyPos.x && wy === keyPos.y) || (wx === goal.x && wy === goal.y)) continue;
+                    if (!newWalls.some(w => w.x === wx && w.y === wy)) newWalls.push({ x: wx, y: wy });
+                }
+            } while (
+                attempts < 200 && 
+                (!hasPath({ x: 0, y: 0 }, keyPos, newWalls, size) || !hasPath(keyPos, goal, newWalls, size))
+            );
+
+            // Double check guarantee: prune any wall that breaks path connectivity
+            if (!hasPath({ x: 0, y: 0 }, keyPos, newWalls, size) || !hasPath(keyPos, goal, newWalls, size)) {
+                newWalls = newWalls.filter(w => {
+                    const testWalls = newWalls.filter(ow => ow !== w);
+                    return hasPath({ x: 0, y: 0 }, keyPos, testWalls, size) && hasPath(keyPos, goal, testWalls, size);
+                });
+            }
+
+            walls = newWalls;
+
+            player = { x: 0, y: 0 };
+            visited = Array.from({ length: size }, () => Array(size).fill(false));
+            if (visited[0]) visited[0][0] = true;
+            hasKey = false;
+            status = "Find the golden key 🔑 and reach the goal flag 🏁!";
+            statusTextElement.style.color = '#38bdf8';
+            isGameActive = true;
+
+            render();
+        }
+
+        function move(dx, dy) {
+            if (!isGameActive) return;
+
+            const nx = player.x + dx;
+            const ny = player.y + dy;
+            if (nx < 0 || ny < 0 || nx >= size || ny >= size) return;
+
+            const hitWall = walls.some(w => w.x === nx && w.y === ny);
+            if (hitWall) {
+                // Wall collision feedback
+                playChime(196, 'sawtooth', 0.28);
+                const frameEl = document.querySelector('.grid-frame');
+                if (frameEl) {
+                    frameEl.classList.add('hit-wall-flash');
+                    setTimeout(() => frameEl.classList.remove('hit-wall-flash'), 360);
+                }
+
+                player = { x: 0, y: 0 };
+                hasKey = false;
+                status = "⚠️ Hit a hidden wall! Resetting to start...";
+                statusTextElement.style.color = '#f87171';
+                visited = Array.from({ length: size }, () => Array(size).fill(false));
+                if (visited[0]) visited[0][0] = true;
+
+                render();
+                return;
+            }
+
+            player = { x: nx, y: ny };
+            if (visited[ny]) visited[ny][nx] = true;
+            status = "Find the golden key 🔑 and reach the goal flag 🏁!";
+            statusTextElement.style.color = '#38bdf8';
+            playChime(480 + (nx + ny) * 20, 'sine', 0.08);
+
+            if (!hasKey && nx === keyPos.x && ny === keyPos.y) {
+                hasKey = true;
+                status = "✨ Golden Key collected! Now head to the Goal Flag 🏁.";
+                statusTextElement.style.color = '#fbbf24';
+                playChime(880, 'sine', 0.25);
+                setTimeout(() => playChime(1174, 'sine', 0.3), 120);
+            }
+
+            if (nx === goal.x && ny === goal.y) {
+                if (hasKey) {
+                    status = "🎉 Goal reached! Level Completed Successfully!";
+                    statusTextElement.style.color = '#34d399';
+                    playChime(880, 'sine', 0.25);
+                    setTimeout(() => playChime(1108, 'sine', 0.25), 140);
+                    setTimeout(() => playChime(1318, 'sine', 0.4), 280);
+                    isGameActive = false;
+                } else {
+                    status = "🔒 Exit locked! You must collect the golden key 🔑 first.";
+                    statusTextElement.style.color = '#f59e0b';
+                    playChime(330, 'triangle', 0.2);
+                }
+            }
+            render();
+        }
+
+        // --- EVENT LISTENERS ---
+        window.addEventListener("keydown", (e) => {
+            const demoOverlay = document.getElementById('demo-overlay-path-finder');
+            if (demoOverlay && demoOverlay.style.display !== 'none') return;
+
+            let dx = 0, dy = 0;
+            if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") dy = -1;
+            if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") dy = 1;
+            if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") dx = -1;
+            if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") dx = 1;
+
+            if (dx !== 0 || dy !== 0) {
+                e.preventDefault();
+                move(dx, dy);
+            }
+        });
+
+        // Touch / Click D-Pad Handlers
+        const touchButtons = [
+            { id: 'btn-touch-up', dx: 0, dy: -1 },
+            { id: 'btn-touch-down', dx: 0, dy: 1 },
+            { id: 'btn-touch-left', dx: -1, dy: 0 },
+            { id: 'btn-touch-right', dx: 1, dy: 0 }
+        ];
+
+        touchButtons.forEach(({ id, dx, dy }) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            const handleAction = (e) => {
+                e.preventDefault();
+                move(dx, dy);
+            };
+            btn.addEventListener('touchstart', handleAction, { passive: false });
+            btn.addEventListener('click', () => move(dx, dy));
+        });
+
+        // Start New Level with Chance Deduction via Parent Bridge
+        function startNewLevelWithChanceCheck() {
+            statusTextElement.textContent = 'Verifying play chance...';
+            statusTextElement.style.color = '#38bdf8';
+
+            if (typeof window.requestNewGameSession === 'function') {
+                window.requestNewGameSession('path-finder', (res) => {
+                    generateLevel();
+                    if (res && res.remainingChances !== undefined && playsLeftCount) {
+                        playsLeftCount.textContent = res.remainingChances;
+                    }
+                }, (denied) => {
+                    statusTextElement.textContent = '⚠️ ' + (denied.message || 'No plays left.');
+                    statusTextElement.style.color = '#f87171';
+                    showNoChancesNotice(denied.message);
+                });
+            } else {
+                generateLevel();
+            }
+        }
+
+        // Size Button Selector Logic
+        sizeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const val = btn.dataset.size;
+                sizeSelect.value = val;
+                sizeButtons.forEach(b => {
+                    b.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+                });
+                btn.className = 'px-2.5 py-1 rounded-lg text-white bg-sky-600 font-semibold shadow';
+                startNewLevelWithChanceCheck();
+            });
+        });
+
+        // Difficulty Button Selector Logic
+        diffButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const val = btn.dataset.diff;
+                difficultySelect.value = val;
+                diffButtons.forEach(b => {
+                    b.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+                });
+                btn.className = 'px-2.5 py-1 rounded-lg text-white bg-sky-600 font-semibold shadow';
+                startNewLevelWithChanceCheck();
+            });
+        });
+
+        sizeSelect.addEventListener('change', () => {
+            sizeButtons.forEach(b => {
+                if (b.dataset.size === sizeSelect.value) {
+                    b.className = 'px-2.5 py-1 rounded-lg text-white bg-sky-600 font-semibold shadow';
+                } else {
+                    b.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+                }
+            });
+            startNewLevelWithChanceCheck();
+        });
+
+        difficultySelect.addEventListener('change', () => {
+            diffButtons.forEach(b => {
+                if (b.dataset.diff === difficultySelect.value) {
+                    b.className = 'px-2.5 py-1 rounded-lg text-white bg-sky-600 font-semibold shadow';
+                } else {
+                    b.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+                }
+            });
+            startNewLevelWithChanceCheck();
+        });
+
+        newLevelButton.addEventListener('click', startNewLevelWithChanceCheck);
+
+        // --- DEMO INITIALIZATION ---
+        function launchDemo() {
+            if (!demoInstance) {
+                demoInstance = window.initPathGameDemo({
+                    onSkip: () => {},
+                    onComplete: () => {}
+                });
+            }
+            demoInstance.start();
+        }
+
+        watchDemoHeaderBtn.addEventListener('click', launchDemo);
+
+        // --- INITIALIZE GAME ---
+        generateLevel();
+    </script>
+</body>
+
+</html>

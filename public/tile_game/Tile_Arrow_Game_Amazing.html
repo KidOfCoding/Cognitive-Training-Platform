@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PathFinder Mouse — Cognitive Grid Assessment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/game_demo.css">
+    <style>
+        :root {
+            --accent-cyan: #38bdf8;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            touch-action: manipulation;
+            background: radial-gradient(circle at 50% 15%, #0f172a 0%, #030712 100%);
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Ambient Glow Backdrop */
+        .ambient-glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.05) 0%, rgba(99, 102, 241, 0.02) 50%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 9x9 Layout for Grid + Perimeter Nodes */
+        .board-wrapper {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        .board-grid-9x9 {
+            display: grid;
+            grid-template-columns: 44px repeat(7, 1fr) 44px;
+            grid-template-rows: 44px repeat(7, 1fr) 44px;
+            /* Drastically increased max size for desktop visibility */
+            width: min(85vh, 95vw, 850px); 
+            height: min(85vh, 95vw, 850px);
+            aspect-ratio: 1 / 1;
+            gap: 6px;
+            align-items: center;
+            justify-items: center;
+            position: relative;
+        }
+
+        /* Perimeter Node Slots for Mouse and Cheese */
+        .perimeter-slot {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 15;
+        }
+
+        .portal-avatar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            font-size: 26px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+            position: relative;
+            animation: pulse-avatar 2s infinite ease-in-out;
+        }
+
+        .portal-avatar.mouse {
+            border-color: #34d399;
+            box-shadow: 0 0 20px rgba(52, 211, 153, 0.6);
+        }
+
+        .portal-avatar.cheese {
+            border-color: #fbbf24;
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
+        }
+
+        @keyframes pulse-avatar {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        /* Directional Entry Indicator Arrow */
+        .portal-dir-arrow {
+            position: absolute;
+            font-size: 14px;
+            font-weight: 900;
+            color: #34d399;
+            text-shadow: 0 0 8px rgba(52, 211, 153, 1);
+            pointer-events: none;
+        }
+        .portal-dir-arrow.down { bottom: -16px; }
+        .portal-dir-arrow.up { top: -16px; transform: rotate(180deg); }
+        .portal-dir-arrow.right { right: -16px; transform: rotate(-90deg); }
+        .portal-dir-arrow.left { left: -16px; transform: rotate(90deg); }
+
+        /* The 7x7 Game Tile Elements */
+        .tile {
+            width: 100%;
+            height: 100%;
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .tile:hover {
+            background: rgba(51, 65, 85, 0.95);
+            border-color: rgba(56, 189, 248, 0.6);
+            transform: scale(1.03);
+            z-index: 5;
+        }
+
+        .tile.selected {
+            background: rgba(14, 116, 144, 0.45) !important;
+            border-color: #38bdf8 !important;
+            box-shadow: 0 0 0 3px #38bdf8, 0 0 20px rgba(56, 189, 248, 0.8) !important;
+            transform: scale(1.06);
+            z-index: 10;
+        }
+
+        /* Entrance and Exit Tiles on the Board */
+        .start-node {
+            background: rgba(16, 185, 129, 0.25) !important;
+            border: 1.5px solid #10b981 !important;
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.5);
+        }
+
+        .end-node {
+            background: rgba(245, 158, 11, 0.25) !important;
+            border: 1.5px solid #f59e0b !important;
+            box-shadow: 0 0 16px rgba(245, 158, 11, 0.5);
+        }
+
+        .tile svg {
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* Neon Tracks & High-Visibility Flow Arrows */
+        .tile .path {
+            stroke: #38bdf8;
+            stroke-width: 22; /* Thicker track */
+            stroke-linecap: round;
+            fill: none;
+            filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.8));
+            transition: stroke 0.2s ease;
+        }
+
+        .tile .arrow {
+            fill: #ffffff;
+            stroke: #0284c7;
+            stroke-width: 2.5;
+            filter: drop-shadow(0 0 5px rgba(56, 189, 248, 1));
+            transition: transform 0.25s ease;
+        }
+
+        /* Result & Feedback Paths */
+        .correct-path {
+            background: rgba(16, 185, 129, 0.5) !important;
+            border-color: #34d399 !important;
+            box-shadow: 0 0 20px rgba(52, 211, 153, 0.85) !important;
+        }
+
+        .correct-path .path {
+            stroke: #6ee7b7 !important;
+            filter: drop-shadow(0 0 8px rgba(110, 231, 183, 1));
+        }
+
+        .correct-path .arrow {
+            fill: #ffffff !important;
+            stroke: #059669 !important;
+            filter: drop-shadow(0 0 6px #34d399);
+        }
+
+        .wrong-path {
+            background: rgba(239, 68, 68, 0.45) !important;
+            border-color: #f87171 !important;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.75) !important;
+        }
+
+        .win-path {
+            animation: pulse-win 0.85s infinite alternate;
+        }
+
+        @keyframes pulse-win {
+            0% { 
+                background: rgba(16, 185, 129, 0.45); 
+                transform: scale(1); 
+                box-shadow: 0 0 16px rgba(16, 185, 129, 0.7);
+            }
+            100% { 
+                background: rgba(16, 185, 129, 0.75); 
+                transform: scale(1.05); 
+                box-shadow: 0 0 30px rgba(52, 211, 153, 1);
+            }
+        }
+
+        /* Glowing Connection Indicator Dots */
+        .connection-indicator {
+            position: absolute;
+            background-color: #34d399;
+            box-shadow: 0 0 10px 4px rgba(52, 211, 153, 0.9);
+            border-radius: 50%;
+            display: none;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .connection-indicator.top { top: -6px; left: calc(50% - 6px); width: 12px; height: 12px; }
+        .connection-indicator.right { right: -6px; top: calc(50% - 6px); width: 12px; height: 12px; }
+        .connection-indicator.bottom { bottom: -6px; left: calc(50% - 6px); width: 12px; height: 12px; }
+        .connection-indicator.left { left: -6px; top: calc(50% - 6px); width: 12px; height: 12px; }
+
+        .connection-indicator.active {
+            display: block;
+        }
+
+        /* Action Toolbar Buttons */
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 16px;
+            font-size: 15px;
+            font-weight: 700;
+            border-radius: 14px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+        }
+
+        .action-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+
+        .action-btn:active:not(:disabled) {
+            transform: scale(0.97);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none;
+        }
+
+        .btn-rotate {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            border-color: rgba(56, 189, 248, 0.4);
+        }
+        .btn-rotate:hover:not(:disabled) {
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+        }
+
+        .btn-change {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: #ffffff;
+            border-color: rgba(52, 211, 153, 0.4);
+        }
+        .btn-change:hover:not(:disabled) {
+            box-shadow: 0 0 20px rgba(52, 211, 153, 0.5);
+        }
+
+        .btn-check {
+            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+            color: #ffffff;
+            border-color: rgba(129, 140, 248, 0.4);
+        }
+        .btn-check:hover:not(:disabled) {
+            box-shadow: 0 0 20px rgba(129, 140, 248, 0.5);
+        }
+
+        .btn-new {
+            background: rgba(30, 41, 59, 0.85);
+            color: #e2e8f0;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .btn-new:hover:not(:disabled) {
+            background: rgba(51, 65, 85, 0.9);
+        }
+
+        .btn-answer {
+            background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+            color: #ffffff;
+            border-color: rgba(192, 132, 252, 0.4);
+        }
+        .btn-answer:hover:not(:disabled) {
+            box-shadow: 0 0 24px rgba(192, 132, 252, 0.55);
+        }
+
+        .kbd-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            padding: 2px 6px;
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            margin-left: auto;
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(3, 7, 18, 0.85);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: rgba(15, 23, 42, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.85), 0 0 40px rgba(168, 85, 247, 0.2);
+            text-align: center;
+            max-width: 420px;
+            width: 90%;
+        }
+
+        /* Desktop specific layout */
+        .game-layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 1.5rem;
+            padding: 1rem;
+        }
+        
+        @media (min-width: 1024px) {
+            .game-layout {
+                flex-direction: row;
+                align-items: stretch;
+                justify-content: center;
+                gap: 3rem;
+            }
+            .sidebar-controls {
+                width: 360px;
+                flex-shrink: 0;
+                display: flex;
+                flex-direction: column;
+                background: rgba(15, 23, 42, 0.6);
+                border: 1px solid rgba(255,255,255,0.05);
+                border-radius: 24px;
+                padding: 1.5rem;
+                backdrop-filter: blur(12px);
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            }
+            header {
+                padding-bottom: 1.5rem;
+                border-bottom: 1px solid rgba(255,255,255,0.05);
+                margin-bottom: 1.5rem;
+            }
+            .board-section {
+                flex-grow: 1;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+
+<body class="text-slate-200">
+
+    <div class="ambient-glow"></div>
+
+    <!-- Main Container: Flex Row on Desktop, Column on Mobile -->
+    <div class="game-layout z-10">
+
+        <!-- Board Area -->
+        <div class="board-section">
+            <div class="board-wrapper">
+                <div id="board-9x9" class="board-grid-9x9">
+                    <!-- Outer 9x9 slots generated dynamically in JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar / Control Panel -->
+        <div class="sidebar-controls">
+            <!-- Header -->
+            <header class="w-full flex flex-col gap-3 py-2">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">🐭</span>
+                        <div>
+                            <h1 class="text-xl md:text-2xl font-extrabold tracking-tight text-white flex items-center gap-1.5 leading-tight">
+                                PathFinder Mouse
+                            </h1>
+                        </div>
+                    </div>
+                    <button id="watch-demo-header-btn" type="button" class="demo-launch-btn flex items-center gap-1 py-1.5 px-3 bg-slate-800 rounded-lg text-sm border border-slate-600 hover:bg-slate-700 transition">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                        <span>Demo</span>
+                    </button>
+                </div>
+                <p class="text-sm text-slate-400">Rotate & flow arrows to connect Mouse 🐭 to Cheese 🧀</p>
+            </header>
+
+            <!-- HUD: Difficulty, Chances Badge & Timer -->
+            <div class="w-full flex flex-col gap-4 mb-6">
+                <div class="flex items-center justify-between">
+                    <div id="difficulty-selector" class="flex gap-1 p-1 bg-slate-900/90 rounded-xl border border-slate-800 text-sm">
+                        <button data-difficulty="easy" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Easy</button>
+                        <button data-difficulty="medium" class="px-3 py-1.5 rounded-lg text-white bg-sky-600 font-semibold shadow">Medium</button>
+                        <button data-difficulty="hard" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Hard</button>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <div id="session-plays-badge" class="px-3 py-1.5 bg-emerald-950/80 border border-emerald-500/40 rounded-xl text-xs text-emerald-400 font-semibold hidden">
+                            Plays: <span id="plays-left-count">-</span>
+                        </div>
+                        <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 border border-slate-700 rounded-xl font-mono text-cyan-400 font-bold text-base shadow-inner">
+                            <span>⏱️</span>
+                            <span id="timer-display">05:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Toolbar (Moved to Column Layout for Desktop) -->
+            <div class="w-full flex flex-col gap-3 mt-auto">
+                <div class="grid grid-cols-2 gap-3 w-full">
+                    <button id="rotate-button" class="action-btn btn-rotate" disabled>
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 9h5v-.001M3 20v-5m0 0h5m-5 0l3 3a8 8 0 0012 0l3-3m-8-8l-3-3a8 8 0 0112 0l3 3" />
+                        </svg>
+                        <span>Rotate</span>
+                        <kbd class="kbd-badge">R</kbd>
+                    </button>
+
+                    <button id="change-path-button" class="action-btn btn-change" disabled>
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 21L3 16.5m0 0L7 12M3 16.5h14m0-13.5L21 7.5m0 0L17 12M21 7.5H7" />
+                        </svg>
+                        <span>Flow</span>
+                        <kbd class="kbd-badge">C</kbd>
+                    </button>
+                </div>
+
+                <button id="check-button" class="action-btn btn-check">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                    <span>Check Path Connection</span>
+                </button>
+
+                <button id="reset-button" class="action-btn btn-new">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Start New Game</span>
+                </button>
+
+                <button id="show-answer-button" class="action-btn btn-answer mt-2">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.002 6.002 0 00-4-5.659V7a4 4 0 118 0v.091a6.002 6.002 0 00-4 5.659z" />
+                    </svg>
+                    <span>Show Answer 💡</span>
+                </button>
+
+                <!-- Status message line -->
+                <div id="message-box" class="h-10 mt-2 flex items-center justify-center bg-slate-900/50 rounded-xl border border-slate-800">
+                    <p id="message" class="text-sm font-semibold tracking-wide text-center"></p>
+                </div>
+                <p class="text-[12px] text-slate-400 text-center mt-2">💡 Tap any tile to select. Tap selected tile again to rotate directly.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reveal Solution Confirmation Modal -->
+    <div id="answer-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="text-4xl mb-3">💡</div>
+            <h2 class="text-xl font-bold text-white mb-2">Reveal Solution?</h2>
+            <p class="text-slate-300 text-sm mb-6">Would you like to reveal the complete winning track from Mouse to Cheese?</p>
+            <div class="flex justify-center gap-4">
+                <button id="answer-confirm-yes" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm rounded-xl shadow transition">Show Solution</button>
+                <button id="answer-confirm-no" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm rounded-xl border border-slate-700 transition">Keep Trying</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recharge Notice Modal (When out of chances) -->
+    <div id="recharge-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="text-4xl mb-3">⚡</div>
+            <h2 class="text-xl font-bold text-white mb-2">No Plays Available</h2>
+            <p id="recharge-notice-text" class="text-slate-300 text-sm mb-6">You have exhausted all chances for PathFinder Mouse. Please recharge your account to start a new game!</p>
+            <div class="flex justify-center gap-4">
+                <button id="recharge-modal-buy" class="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-semibold text-sm rounded-xl shadow transition">⚡ Add Plays / Top Up</button>
+                <button id="recharge-modal-close" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm rounded-xl border border-slate-700 transition">Got It</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Demo Engine -->
+    <script src="/shared/game_demo.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const GRID_SIZE = 7;
+            const GAME_DURATION = 300;
+
+            // DOM Elements
+            const board9x9 = document.getElementById('board-9x9');
+            const checkButton = document.getElementById('check-button');
+            const resetButton = document.getElementById('reset-button');
+            const rotateButton = document.getElementById('rotate-button');
+            const changePathButton = document.getElementById('change-path-button');
+            const showAnswerButton = document.getElementById('show-answer-button');
+            const messageEl = document.getElementById('message');
+            const timerDisplay = document.getElementById('timer-display');
+            const answerModal = document.getElementById('answer-modal');
+            const answerConfirmYes = document.getElementById('answer-confirm-yes');
+            const answerConfirmNo = document.getElementById('answer-confirm-no');
+            const rechargeModal = document.getElementById('recharge-modal');
+            const rechargeModalClose = document.getElementById('recharge-modal-close');
+            const rechargeNoticeText = document.getElementById('recharge-notice-text');
+            const difficultyButtons = document.querySelectorAll('#difficulty-selector button');
+            const sessionPlaysBadge = document.getElementById('session-plays-badge');
+            const playsLeftCount = document.getElementById('plays-left-count');
+
+            // Game State
+            let gridState = [];
+            let solutionGridState = [];
+            let selectedTile = null;
+            let timerInterval = null;
+            let timeLeft = GAME_DURATION;
+            let startPos, endPos;
+            let currentDifficulty = 'medium';
+
+            const tileTypes = {
+                straight: { baseConnections: [0, 2], svg: `<path class="path" d="M50 0 V100" />` },
+                corner: { baseConnections: [0, 1], svg: `<path class="path" d="M50 0 V50 H100" />` },
+                t_shape: { baseConnections: [3, 0, 1], svg: `<path class="path" d="M0 50 H100 M50 50 V0" />` }
+            };
+
+            // Audio sound effects helper
+            let audioCtx = null;
+            function playChime(freq = 440, type = 'sine', duration = 0.15) {
+                try {
+                    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + duration);
+                } catch (e) {}
+            }
+
+            // Listen for session info from parent or opener window
+            window.addEventListener('message', (e) => {
+                if (e.data && e.data.type === 'GAME_SESSION_INFO') {
+                    if (e.data.totalChances !== undefined && sessionPlaysBadge && playsLeftCount) {
+                        playsLeftCount.textContent = e.data.totalChances;
+                        sessionPlaysBadge.classList.remove('hidden');
+                    }
+                }
+            });
+            // Request session info on mount (from iframe parent or window.opener)
+            try { 
+                const hostWin = (window.parent && window.parent !== window) ? window.parent : ((window.opener && !window.opener.closed) ? window.opener : null);
+                if (hostWin) hostWin.postMessage({ type: 'GET_GAME_SESSION_INFO' }, '*'); 
+            } catch (e) {}
+
+            function showNoChancesNotice(msg) {
+                if (rechargeNoticeText) {
+                    rechargeNoticeText.textContent = msg || 'You have exhausted your available plays. Please recharge!';
+                }
+                rechargeModal.classList.add('active');
+            }
+
+            const rechargeModalBuy = document.getElementById('recharge-modal-buy');
+            if (rechargeModalBuy) {
+                rechargeModalBuy.addEventListener('click', () => {
+                    rechargeModal.classList.remove('active');
+                    const hostWin = (window.parent && window.parent !== window) ? window.parent : ((window.opener && !window.opener.closed) ? window.opener : null);
+                    if (hostWin) {
+                        hostWin.postMessage({ type: 'OPEN_PAYMENT_MODAL', message: 'Recharge your account to unlock additional plays for PathFinder Mouse!' }, '*');
+                        try { hostWin.focus(); } catch (e) {}
+                    }
+                });
+            }
+
+            rechargeModalClose.addEventListener('click', () => {
+                rechargeModal.classList.remove('active');
+            });
+
+            // Timer Logic
+            function startTimer() {
+                clearInterval(timerInterval);
+                timeLeft = GAME_DURATION;
+                updateTimerDisplay();
+                timerInterval = setInterval(updateTimer, 1000);
+            }
+
+            function updateTimer() {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    timerDisplay.classList.add('text-red-400');
+                    messageEl.textContent = "Time's up! Showing the answer.";
+                    messageEl.style.color = '#f87171';
+                    disableAllButtons();
+                    triggerShowAnswer(true);
+                }
+            }
+
+            function updateTimerDisplay() {
+                const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                const seconds = (timeLeft % 60).toString().padStart(2, '0');
+                timerDisplay.textContent = `${minutes}:${seconds}`;
+            }
+
+            // Grid Generation
+            function generateSolvableGrid(difficulty) {
+                const pathConstraints = {
+                    easy: { min: 7, max: 12, dist: 4 },
+                    medium: { min: 13, max: 22, dist: 7 },
+                    hard: { min: 23, max: 35, dist: 10 }
+                };
+                const constraints = pathConstraints[difficulty];
+
+                function getRandomEdgePoint() {
+                    const side = Math.floor(Math.random() * 4);
+                    const pos = Math.floor(Math.random() * GRID_SIZE);
+                    switch (side) {
+                        case 0: return { row: 0, col: pos, dir: 0 };
+                        case 1: return { row: pos, col: GRID_SIZE - 1, dir: 1 };
+                        case 2: return { row: GRID_SIZE - 1, col: pos, dir: 2 };
+                        case 3: return { row: pos, col: 0, dir: 3 };
+                    }
+                }
+
+                let path;
+                while (true) {
+                    do {
+                        startPos = getRandomEdgePoint();
+                        endPos = getRandomEdgePoint();
+                        const dist = Math.abs(startPos.row - endPos.row) + Math.abs(startPos.col - endPos.col);
+                        if (dist >= constraints.dist && !(startPos.row === endPos.row && startPos.col === endPos.col)) {
+                            break;
+                        }
+                    } while (true);
+
+                    path = [];
+                    const visited = new Set();
+                    let current = { row: startPos.row, col: startPos.col };
+                    let entryDir = startPos.dir;
+                    let stuck = false;
+
+                    for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+                        const key = `${current.row},${current.col}`;
+                        path.push({ ...current, entryDir: entryDir });
+                        visited.add(key);
+
+                        if (current.row === endPos.row && current.col === endPos.col) {
+                            path[path.length - 1].exitDir = endPos.dir;
+                            break;
+                        }
+
+                        let possibleMoves = [0, 1, 2, 3].filter(dir => {
+                            if (dir === entryDir) return false;
+                            let nextR = current.row, nextC = current.col;
+                            if (dir === 0) nextR--; if (dir === 1) nextC++; if (dir === 2) nextR++; if (dir === 3) nextC--;
+                            return nextR >= 0 && nextR < GRID_SIZE && nextC >= 0 && nextC < GRID_SIZE && !visited.has(`${nextR},${nextC}`);
+                        });
+
+                        if (possibleMoves.length === 0) {
+                            stuck = true;
+                            break;
+                        }
+
+                        const exitDir = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+                        path[path.length - 1].exitDir = exitDir;
+                        if (exitDir === 0) current.row--; if (exitDir === 1) current.col++; if (exitDir === 2) current.row++; if (exitDir === 3) current.col--;
+                        entryDir = (exitDir + 2) % 4;
+                    }
+
+                    if (!stuck && path[path.length - 1].exitDir !== undefined && path.length >= constraints.min && path.length <= constraints.max) {
+                        break;
+                    }
+                }
+
+                const pathGrid = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+                path.forEach(p => {
+                    const connections = [p.entryDir, p.exitDir].sort();
+                    let type = 'corner';
+                    if ((connections[0] === 0 && connections[1] === 2) || (connections[0] === 1 && connections[1] === 3)) {
+                        type = 'straight';
+                    }
+                    pathGrid[p.row][p.col] = type;
+                });
+
+                solutionGridState = [];
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    const row = [];
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        const pathTile = path.find(p => p.row === r && p.col === c);
+                        if (pathTile) {
+                            const tile = { type: pathGrid[r][c] };
+                            const pathCount = (tile.type === 't_shape') ? 6 : 2;
+                            let solved = false;
+                            for (let rot = 0; rot < 4; rot++) {
+                                for (let pIdx = 0; pIdx < pathCount; pIdx++) {
+                                    tile.rotation = rot;
+                                    tile.pathSelection = pIdx;
+                                    const { entry, exit } = getTileConnections(tile);
+                                    if (entry === pathTile.entryDir && exit === pathTile.exitDir) {
+                                        row.push(JSON.parse(JSON.stringify(tile)));
+                                        solved = true;
+                                        break;
+                                    }
+                                }
+                                if (solved) break;
+                            }
+                        } else {
+                            const types = ['straight', 'corner', 't_shape'];
+                            const type = types[Math.floor(Math.random() * types.length)];
+                            const pathCount = (type === 't_shape') ? 6 : 2;
+                            row.push({
+                                type,
+                                rotation: Math.floor(Math.random() * 4),
+                                pathSelection: Math.floor(Math.random() * pathCount)
+                            });
+                        }
+                    }
+                    solutionGridState.push(row);
+                }
+
+                gridState = JSON.parse(JSON.stringify(solutionGridState));
+                gridState.forEach((row, r) => row.forEach((tile, c) => {
+                    if ((r === startPos.row && c === startPos.col) || (r === endPos.row && c === endPos.col)) return;
+                    tile.rotation = Math.floor(Math.random() * 4);
+                    const pathCount = (tile.type === 't_shape') ? 6 : 2;
+                    tile.pathSelection = Math.floor(Math.random() * pathCount);
+                }));
+            }
+
+            function initializeGame() {
+                selectedTile = null;
+                generateSolvableGrid(currentDifficulty);
+                renderBoard9x9();
+                enableAllButtons();
+                timerDisplay.classList.remove('text-red-400');
+                startTimer();
+                updateConnectionHighlights();
+            }
+
+            // Render complete 9x9 board layout: Perimeter nodes directly align with start & end points!
+            function renderBoard9x9() {
+                board9x9.innerHTML = '';
+
+                // Calculate perimeter coordinates for Mouse and Cheese
+                // Row 1 & 9, Col 1 & 9 are outer margins (1-indexed for CSS grid)
+                let mouseRow = 1, mouseCol = 1, mouseDirClass = 'down';
+                if (startPos.dir === 0) { mouseRow = 1; mouseCol = startPos.col + 2; mouseDirClass = 'down'; }
+                if (startPos.dir === 1) { mouseRow = startPos.row + 2; mouseCol = 9; mouseDirClass = 'left'; }
+                if (startPos.dir === 2) { mouseRow = 9; mouseCol = startPos.col + 2; mouseDirClass = 'up'; }
+                if (startPos.dir === 3) { mouseRow = startPos.row + 2; mouseCol = 1; mouseDirClass = 'right'; }
+
+                let cheeseRow = 1, cheeseCol = 1, cheeseDirClass = 'down';
+                if (endPos.dir === 0) { cheeseRow = 1; cheeseCol = endPos.col + 2; cheeseDirClass = 'down'; }
+                if (endPos.dir === 1) { cheeseRow = endPos.row + 2; cheeseCol = 9; cheeseDirClass = 'left'; }
+                if (endPos.dir === 2) { cheeseRow = 9; cheeseCol = endPos.col + 2; cheeseDirClass = 'up'; }
+                if (endPos.dir === 3) { cheeseRow = endPos.row + 2; cheeseCol = 1; cheeseDirClass = 'right'; }
+
+                // 1. Create Mouse Entrance Node
+                const mouseSlot = document.createElement('div');
+                mouseSlot.className = 'perimeter-slot';
+                mouseSlot.style.gridRow = `${mouseRow}`;
+                mouseSlot.style.gridColumn = `${mouseCol}`;
+                mouseSlot.innerHTML = `
+                    <div class="portal-avatar mouse" title="Start: Mouse">
+                        <span>🐭</span>
+                        <span class="portal-dir-arrow ${mouseDirClass}">➔</span>
+                    </div>
+                `;
+                board9x9.appendChild(mouseSlot);
+
+                // 2. Create Cheese Goal Node
+                const cheeseSlot = document.createElement('div');
+                cheeseSlot.className = 'perimeter-slot';
+                cheeseSlot.style.gridRow = `${cheeseRow}`;
+                cheeseSlot.style.gridColumn = `${cheeseCol}`;
+                cheeseSlot.innerHTML = `
+                    <div class="portal-avatar cheese" title="Goal: Cheese">
+                        <span>🧀</span>
+                    </div>
+                `;
+                board9x9.appendChild(cheeseSlot);
+
+                // 3. Render the 7x7 Game Tiles in rows 2..8, cols 2..8
+                gridState.forEach((row, r) => {
+                    row.forEach((tileData, c) => {
+                        const tile = document.createElement('div');
+                        tile.className = 'tile';
+                        tile.style.gridRow = `${r + 2}`;
+                        tile.style.gridColumn = `${c + 2}`;
+
+                        if (r === startPos.row && c === startPos.col) tile.classList.add('start-node');
+                        if (r === endPos.row && c === endPos.col) tile.classList.add('end-node');
+                        if (selectedTile && selectedTile.row === r && selectedTile.col === c) tile.classList.add('selected');
+
+                        tile.dataset.row = r;
+                        tile.dataset.col = c;
+                        tile.innerHTML = generateTileSVG(tileData);
+                        tile.innerHTML += `
+                            <div class="connection-indicator top"></div>
+                            <div class="connection-indicator right"></div>
+                            <div class="connection-indicator bottom"></div>
+                            <div class="connection-indicator left"></div>
+                        `;
+                        tile.addEventListener('click', handleTileClick);
+                        board9x9.appendChild(tile);
+                    });
+                });
+            }
+
+            // Expanded, highly visible chevron arrows with sharp stroke & glow
+            function generateArrowsSVG(tileType, entryDir, exitDir) {
+                let arrows = '';
+                // Drastically increased size of the directional arrow path for better visibility
+                const arrow = (cx, cy, dir) => `
+                    <path class="arrow" d="M-12 10 L0 -12 L12 10 L0 3 Z" transform="translate(${cx}, ${cy}) rotate(${dir * 90})" />
+                `;
+
+                if (tileType === 'straight') {
+                    if (entryDir === 0) {
+                        arrows += arrow(50, 25, 2);
+                        arrows += arrow(50, 50, 2);
+                        arrows += arrow(50, 75, 2);
+                    } else {
+                        arrows += arrow(50, 75, 0);
+                        arrows += arrow(50, 50, 0);
+                        arrows += arrow(50, 25, 0);
+                    }
+                } else if (tileType === 'corner') {
+                    if (entryDir === 0) {
+                        arrows += arrow(50, 25, 2);
+                        arrows += arrow(72, 50, 1);
+                    } else {
+                        arrows += arrow(72, 50, 3);
+                        arrows += arrow(50, 25, 0);
+                    }
+                } else if (tileType === 't_shape') {
+                    if (entryDir === 3) {
+                        if (exitDir === 0) {
+                            arrows += arrow(25, 50, 1);
+                            arrows += arrow(50, 25, 0);
+                        } else {
+                            arrows += arrow(25, 50, 1);
+                            arrows += arrow(75, 50, 1);
+                        }
+                    } else if (entryDir === 0) {
+                        if (exitDir === 3) {
+                            arrows += arrow(50, 25, 2);
+                            arrows += arrow(25, 50, 3);
+                        } else {
+                            arrows += arrow(50, 25, 2);
+                            arrows += arrow(75, 50, 1);
+                        }
+                    } else if (entryDir === 1) {
+                        if (exitDir === 0) {
+                            arrows += arrow(75, 50, 3);
+                            arrows += arrow(50, 25, 0);
+                        } else {
+                            arrows += arrow(75, 50, 3);
+                            arrows += arrow(25, 50, 3);
+                        }
+                    }
+                }
+                return arrows;
+            }
+
+            function generateTileSVG(tile) {
+                const rotation = tile.rotation * 90;
+                const tileDef = tileTypes[tile.type];
+                const { entry, exit } = getTileConnections(tile);
+                const localEntry = (entry - tile.rotation + 4) % 4;
+                const localExit = (exit - tile.rotation + 4) % 4;
+                const arrows = generateArrowsSVG(tile.type, localEntry, localExit);
+                return `<svg viewBox="0 0 100 100"><g style="transform: rotate(${rotation}deg); transform-origin: center;">${tileDef.svg}${arrows}</g></svg>`;
+            }
+
+            function getTileConnections(tile) {
+                const rotatedBase = tileTypes[tile.type].baseConnections.map(c => (c + tile.rotation) % 4);
+                let entry, exit;
+                if (tile.type === 'straight' || tile.type === 'corner') {
+                    const [c1, c2] = rotatedBase;
+                    [entry, exit] = tile.pathSelection === 0 ? [c1, c2] : [c2, c1];
+                } else {
+                    const [c1, c2, c3] = rotatedBase;
+                    switch (tile.pathSelection) {
+                        case 0: [entry, exit] = [c1, c2]; break;
+                        case 1: [entry, exit] = [c2, c1]; break;
+                        case 2: [entry, exit] = [c1, c3]; break;
+                        case 3: [entry, exit] = [c3, c1]; break;
+                        case 4: [entry, exit] = [c2, c3]; break;
+                        case 5: [entry, exit] = [c3, c2]; break;
+                    }
+                }
+                return { entry, exit };
+            }
+
+            function handleTileClick(e) {
+                const r = parseInt(e.currentTarget.dataset.row);
+                const c = parseInt(e.currentTarget.dataset.col);
+                if ((r === startPos.row && c === startPos.col) || (r === endPos.row && c === endPos.col)) {
+                    selectedTile = null;
+                } else if (selectedTile && selectedTile.row === r && selectedTile.col === c) {
+                    // Tap again on already selected tile rotates immediately (fast mobile UX)
+                    handleRotate();
+                    return;
+                } else {
+                    selectedTile = { row: r, col: c };
+                    playChime(500, 'sine', 0.05);
+                }
+                renderBoard9x9();
+                updateButtonStates();
+            }
+
+            function handleRotate() {
+                if (!selectedTile) return;
+                playChime(620, 'sine', 0.08);
+                gridState[selectedTile.row][selectedTile.col].rotation = (gridState[selectedTile.row][selectedTile.col].rotation + 1) % 4;
+                onTileChange();
+            }
+
+            function handleChangePath() {
+                if (!selectedTile) return;
+                playChime(740, 'triangle', 0.1);
+                const tile = gridState[selectedTile.row][selectedTile.col];
+                const pathCount = (tile.type === 't_shape') ? 6 : 2;
+                tile.pathSelection = (tile.pathSelection + 1) % pathCount;
+                onTileChange();
+            }
+
+            function onTileChange() {
+                clearHighlights();
+                renderBoard9x9();
+                updateConnectionHighlights();
+                if (checkSolution(false)) triggerWin();
+            }
+
+            function clearHighlights() {
+                document.querySelectorAll('.tile').forEach(t => t.classList.remove('correct-path', 'wrong-path', 'win-path'));
+                messageEl.textContent = '';
+            }
+
+            function updateButtonStates() {
+                const disabled = !selectedTile;
+                rotateButton.disabled = disabled;
+                changePathButton.disabled = disabled;
+            }
+
+            function disableAllButtons() {
+                rotateButton.disabled = true;
+                changePathButton.disabled = true;
+                checkButton.disabled = true;
+                showAnswerButton.disabled = true;
+            }
+
+            function enableAllButtons() {
+                checkButton.disabled = false;
+                showAnswerButton.disabled = false;
+                updateButtonStates();
+            }
+
+            function checkSolution(highlight = true) {
+                let current = { row: startPos.row, col: startPos.col };
+                let currentEntryDir = startPos.dir;
+                let pathTiles = [];
+                const visited = new Set();
+
+                for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+                    const key = `${current.row},${current.col}`;
+                    if (visited.has(key)) break;
+                    visited.add(key);
+                    pathTiles.push({ row: current.row, col: current.col });
+
+                    const tile = gridState[current.row][current.col];
+                    const { entry, exit } = getTileConnections(tile);
+                    if (entry !== currentEntryDir) break;
+
+                    if (current.row === endPos.row && current.col === endPos.col && exit === endPos.dir) {
+                        if (highlight && timeLeft > 0) clearInterval(timerInterval);
+                        if (highlight) highlightPath(pathTiles, true);
+                        return true;
+                    }
+
+                    const exitDir = exit;
+                    if (exitDir === 0) current.row--;
+                    else if (exitDir === 1) current.col++;
+                    else if (exitDir === 2) current.row++;
+                    else if (exitDir === 3) current.col--;
+
+                    currentEntryDir = (exitDir + 2) % 4;
+                    if (current.row < 0 || current.row >= GRID_SIZE || current.col < 0 || current.col >= GRID_SIZE) break;
+                }
+
+                if (highlight) highlightPath(pathTiles, false);
+                return false;
+            }
+
+            function highlightPath(path, isCorrect) {
+                path.forEach((p, index) => {
+                    setTimeout(() => {
+                        const tile = document.querySelector(`.tile[data-row='${p.row}'][data-col='${p.col}']`);
+                        if (tile) tile.classList.add(isCorrect ? 'correct-path' : 'wrong-path');
+                        if (isCorrect) playChime(400 + index * 30, 'sine', 0.08);
+                    }, index * 60);
+                });
+
+                setTimeout(() => {
+                    messageEl.textContent = isCorrect ? '🎉 Great Job! Path is fully connected!' : '⚠️ Oops! The track is disconnected or arrows clash.';
+                    messageEl.style.color = isCorrect ? '#34d399' : '#f87171';
+                    if (!isCorrect) playChime(220, 'sawtooth', 0.2);
+                }, path.length * 60);
+            }
+
+            function triggerWin() {
+                clearInterval(timerInterval);
+                disableAllButtons();
+                const path = findSolutionPath();
+                path.forEach((p, index) => {
+                    setTimeout(() => {
+                        const tile = document.querySelector(`.tile[data-row='${p.row}'][data-col='${p.col}']`);
+                        if (tile) tile.classList.add('win-path');
+                        playChime(500 + index * 40, 'triangle', 0.1);
+                    }, index * 70);
+                });
+                setTimeout(() => {
+                    messageEl.textContent = '🌟 You solved the maze! Fantastic logic!';
+                    messageEl.style.color = '#34d399';
+                }, path.length * 70);
+            }
+
+            function findSolutionPath() {
+                let current = { row: startPos.row, col: startPos.col };
+                let currentEntryDir = startPos.dir;
+                let pathTiles = [];
+                const visited = new Set();
+
+                for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+                    const key = `${current.row},${current.col}`;
+                    pathTiles.push({ row: current.row, col: current.col });
+                    visited.add(key);
+
+                    if (current.row === endPos.row && current.col === endPos.col) break;
+
+                    const { entry, exit } = getTileConnections(gridState[current.row][current.col]);
+                    const exitDir = (entry === currentEntryDir) ? exit : entry;
+
+                    if (exitDir === 0) current.row--;
+                    else if (exitDir === 1) current.col++;
+                    else if (exitDir === 2) current.row++;
+                    else if (exitDir === 3) current.col--;
+
+                    currentEntryDir = (exitDir + 2) % 4;
+                }
+                return pathTiles;
+            }
+
+            function updateConnectionHighlights() {
+                document.querySelectorAll('.connection-indicator').forEach(i => i.classList.remove('active'));
+                
+                const startTile = document.querySelector(`.tile[data-row='${startPos.row}'][data-col='${startPos.col}']`);
+                if (startTile) {
+                    const startTileConn = getTileConnections(gridState[startPos.row][startPos.col]);
+                    if (startTileConn.entry === startPos.dir || startTileConn.exit === startPos.dir) {
+                        const indicator = startTile.querySelector('.' + ['top', 'right', 'bottom', 'left'][startPos.dir]);
+                        if (indicator) indicator.classList.add('active');
+                    }
+                }
+
+                const endTile = document.querySelector(`.tile[data-row='${endPos.row}'][data-col='${endPos.col}']`);
+                if (endTile) {
+                    const endTileConn = getTileConnections(gridState[endPos.row][endPos.col]);
+                    if (endTileConn.entry === endPos.dir || endTileConn.exit === endPos.dir) {
+                        const indicator = endTile.querySelector('.' + ['top', 'right', 'bottom', 'left'][endPos.dir]);
+                        if (indicator) indicator.classList.add('active');
+                    }
+                }
+            }
+
+            // Beautiful progressive Show Answer animation
+            function triggerShowAnswer(isAutoSolve = false) {
+                disableAllButtons();
+                messageEl.textContent = 'Revealing solution route...';
+                messageEl.style.color = '#c084fc';
+
+                // Copy solution into grid
+                gridState = JSON.parse(JSON.stringify(solutionGridState));
+                renderBoard9x9();
+                updateConnectionHighlights();
+
+                const path = findSolutionPath();
+                highlightPath(path, true);
+
+                setTimeout(() => {
+                    resetButton.disabled = false;
+                    messageEl.textContent = '🌟 Full route illuminated from Mouse 🐭 to Cheese 🧀!';
+                    messageEl.style.color = '#34d399';
+                }, path.length * 60 + 200);
+            }
+
+            // Keyboard Shortcuts
+            window.addEventListener('keydown', (e) => {
+                const demoOverlay = document.getElementById('demo-overlay-tile-maze');
+                if (demoOverlay && demoOverlay.style.display !== 'none') return;
+
+                if (e.key === 'r' || e.key === 'R') {
+                    if (selectedTile) handleRotate();
+                } else if (e.key === 'c' || e.key === 'C') {
+                    if (selectedTile) handleChangePath();
+                }
+            });
+
+            // Start New Game with Chance Deduction via Parent Bridge
+            function startNewGameWithChanceCheck() {
+                messageEl.textContent = 'Preparing new assessment...';
+                messageEl.style.color = '#38bdf8';
+
+                if (typeof window.requestNewGameSession === 'function') {
+                    window.requestNewGameSession('tile-maze', (res) => {
+                        clearHighlights();
+                        initializeGame();
+                        if (res && res.remainingChances !== undefined && playsLeftCount) {
+                            playsLeftCount.textContent = res.remainingChances;
+                        }
+                    }, (denied) => {
+                        messageEl.textContent = '⚠️ ' + (denied.message || 'No plays left.');
+                        messageEl.style.color = '#f87171';
+                        showNoChancesNotice(denied.message);
+                    });
+                } else {
+                    clearHighlights();
+                    initializeGame();
+                }
+            }
+
+            // Difficulty buttons
+            difficultyButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentDifficulty = btn.dataset.difficulty;
+                    difficultyButtons.forEach(b => {
+                        b.className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition';
+                    });
+                    btn.className = 'px-3 py-1.5 rounded-lg text-white bg-sky-600 font-semibold shadow';
+                    startNewGameWithChanceCheck();
+                });
+            });
+
+            checkButton.addEventListener('click', () => {
+                selectedTile = null; updateButtonStates(); renderBoard9x9(); clearHighlights();
+                checkSolution();
+            });
+
+            resetButton.addEventListener('click', startNewGameWithChanceCheck);
+            rotateButton.addEventListener('click', handleRotate);
+            changePathButton.addEventListener('click', handleChangePath);
+
+            showAnswerButton.addEventListener('click', () => answerModal.classList.add('active'));
+            answerConfirmNo.addEventListener('click', () => answerModal.classList.remove('active'));
+            answerConfirmYes.addEventListener('click', () => {
+                answerModal.classList.remove('active');
+                triggerShowAnswer(false);
+            });
+
+            // Launch demo helper
+            let demoInstance = null;
+            function launchDemo() {
+                if (!demoInstance) {
+                    demoInstance = window.initTileGameDemo({
+                        onSkip: () => {},
+                        onComplete: () => {}
+                    });
+                }
+                demoInstance.start();
+            }
+
+            const watchDemoHeaderBtn = document.getElementById('watch-demo-header-btn');
+            if (watchDemoHeaderBtn) watchDemoHeaderBtn.addEventListener('click', launchDemo);
+
+            initializeGame();
+        });
+    </script>
+</body>
+
+</html>

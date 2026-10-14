@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Bubble Sort Game — Cognitive Assessment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/game_demo.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #080c16;
+            color: #ffffff;
+        }
+
+        .bubble {
+            width: 130px;
+            height: 130px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            text-align: center;
+            font-weight: 700;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s, box-shadow 0.3s;
+            user-select: none;
+            overflow-wrap: break-word;
+            box-sizing: border-box;
+        }
+
+        .bubble:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+        }
+
+        .bubble:active {
+            transform: scale(0.95);
+        }
+
+        .bubble-initial {
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            border: 2px solid rgba(56, 189, 248, 0.4);
+            box-shadow: 0 8px 24px rgba(2, 132, 199, 0.25);
+        }
+
+        .bubble-selected {
+            background: linear-gradient(135deg, #7c3aed, #9333ea);
+            border: 2px solid rgba(192, 132, 252, 0.6);
+            transform: scale(1.08);
+            box-shadow: 0 0 25px rgba(168, 85, 247, 0.45);
+        }
+
+        #progress-bar-container {
+            background-color: #1e293b;
+        }
+
+        #progress-bar {
+            transition: width 0.1s linear;
+        }
+
+        #dashboard-table-container {
+            max-height: 350px;
+            overflow-y: auto;
+            border-radius: 0.75rem;
+            border: 1px solid #334155;
+        }
+
+        #dashboard-table-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #dashboard-table-container::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        #dashboard-table-container::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body class="h-screen max-h-screen overflow-hidden text-white flex items-center justify-center p-2 md:p-4">
+    <div id="game-container" class="bg-slate-900/90 rounded-2xl shadow-2xl p-4 md:p-6 max-w-3xl w-full border border-slate-800 relative flex flex-col justify-between max-h-[96vh]">
+        
+        <!-- Header Bar with Watch Demo Button -->
+        <div class="flex items-center justify-between gap-3 pb-3 mb-2 border-b border-slate-800">
+            <div>
+                <h1 class="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                    <span>Math Bubble Sort</span>
+                </h1>
+                <p class="text-xs text-slate-400 mt-0.5">Select bubbles in <span class="font-semibold text-cyan-400">ascending order</span> (smallest to largest).</p>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <div id="session-plays-badge" class="px-2 py-0.5 bg-emerald-950/80 border border-emerald-500/40 rounded-lg text-[11px] text-emerald-400 font-semibold hidden">
+                    Plays Left: <span id="plays-left-count">-</span>
+                </div>
+                <button id="watch-demo-header-btn" type="button" class="demo-launch-btn py-1 px-2.5 text-xs">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    <span>Demo</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- First-time Welcome Prompt -->
+        <div id="first-time-prompt" class="demo-prompt-card w-full" style="display: none;">
+            <div class="demo-prompt-content">
+                <div class="demo-prompt-icon">💡</div>
+                <div>
+                    <h4 class="demo-prompt-title">New to Math Bubble Sort?</h4>
+                    <p class="demo-prompt-desc">Watch our interactive guided demo with voiceover to learn the ascending sort strategy!</p>
+                </div>
+            </div>
+            <div class="demo-prompt-actions">
+                <button type="button" id="prompt-watch-demo" class="demo-btn demo-btn-primary py-1.5 px-3.5 text-xs">Watch Demo</button>
+                <button type="button" id="prompt-skip-demo" class="demo-btn demo-btn-secondary py-1.5 px-3 text-xs">Skip & Play</button>
+            </div>
+        </div>
+
+        <!-- Active Game UI -->
+        <div id="game-ui" class="hidden">
+            <div class="flex justify-between items-center mb-3">
+                <div id="question-tracker" class="text-lg md:text-xl font-bold text-slate-200">Question: 1/25</div>
+                <div id="timer" class="text-base md:text-lg font-semibold text-cyan-400 font-mono">Time: 10.0s</div>
+            </div>
+            <div id="progress-bar-container" class="w-full rounded-full h-2.5 mb-6 overflow-hidden">
+                <div id="progress-bar" class="bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 h-2.5 rounded-full"
+                    style="width: 100%"></div>
+            </div>
+        </div>
+
+        <!-- Bubbles Area -->
+        <div id="bubbles" class="flex flex-wrap justify-center gap-6 min-h-[140px] items-center my-4"></div>
+        <div id="message" class="text-2xl font-bold text-center mt-4 min-h-[3rem] transition-all"></div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="text-center py-4">
+            <div class="flex justify-center items-center gap-3 mt-4 text-slate-300">
+                <label for="feedback-toggle" class="cursor-pointer text-sm select-none">Show feedback immediately</label>
+                <div class="relative inline-block w-10 align-middle select-none">
+                    <input type="checkbox" name="feedback-toggle" id="feedback-toggle"
+                        class="absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 transform-gpu checked:translate-x-4 checked:border-cyan-500"
+                        checked />
+                    <label for="feedback-toggle"
+                        class="block overflow-hidden h-6 rounded-full bg-slate-700 cursor-pointer"></label>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-center gap-4 mt-8 flex-wrap">
+                <button id="start-btn"
+                    class="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold py-3.5 px-9 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all transform hover:scale-105 shadow-lg shadow-cyan-500/25">
+                    Start Game
+                </button>
+                <button id="demo-from-start-btn"
+                    class="bg-slate-800 text-slate-200 hover:text-white border border-slate-700 hover:border-cyan-400 font-semibold py-3.5 px-6 rounded-xl transition-all flex items-center gap-2">
+                    <span class="text-cyan-400">🎬</span> Watch Tutorial Demo
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Modal (End of Game) -->
+        <div id="dashboard"
+            class="hidden fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <div
+                class="bg-slate-900 border border-slate-700 rounded-2xl p-6 md:p-8 max-w-5xl w-full text-center shadow-2xl fade-in max-h-[90vh] overflow-y-auto">
+                <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-3">Assessment Summary</h2>
+                <div id="dashboard-summary" class="text-lg md:text-xl text-slate-300 mb-6"></div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-white">
+                    <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
+                        <p class="text-xs text-slate-400 font-medium uppercase">Final Score</p>
+                        <p id="stat-score" class="text-2xl font-bold mt-1 text-cyan-400 font-mono"></p>
+                    </div>
+                    <div class="bg-emerald-950/60 border border-emerald-500/30 p-4 rounded-xl">
+                        <p class="text-xs text-emerald-400 font-medium uppercase">Correct</p>
+                        <p id="stat-correct" class="text-2xl font-bold mt-1 text-emerald-300 font-mono"></p>
+                    </div>
+                    <div class="bg-rose-950/60 border border-rose-500/30 p-4 rounded-xl">
+                        <p class="text-xs text-rose-400 font-medium uppercase">Incorrect</p>
+                        <p id="stat-incorrect" class="text-2xl font-bold mt-1 text-rose-300 font-mono"></p>
+                    </div>
+                    <div class="bg-sky-950/60 border border-sky-500/30 p-4 rounded-xl">
+                        <p class="text-xs text-sky-400 font-medium uppercase">Total Questions</p>
+                        <p id="stat-avg-time" class="text-2xl font-bold mt-1 text-sky-300 font-mono">25</p>
+                    </div>
+                </div>
+                <div id="dashboard-table-container" class="mb-6">
+                    <table class="w-full text-left text-slate-300 text-sm">
+                        <thead class="sticky top-0 bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">Q#</th>
+                                <th class="p-3">Expressions</th>
+                                <th class="p-3">Correct Order (Value)</th>
+                                <th class="p-3">Your Order (Value)</th>
+                                <th class="p-3">Result</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-results"></tbody>
+                    </table>
+                </div>
+                <button id="play-again-btn"
+                    class="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold py-3 px-8 rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all transform hover:scale-105 shadow-lg shadow-cyan-500/25">
+                    Play Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Demo Engine -->
+    <script src="/shared/game_demo.js"></script>
+
+    <script>
+        const bubblesContainer = document.getElementById('bubbles');
+        const timerElement = document.getElementById('timer');
+        const progressBar = document.getElementById('progress-bar');
+        const messageElement = document.getElementById('message');
+        const startBtn = document.getElementById('start-btn');
+        const startScreen = document.getElementById('start-screen');
+        const gameUI = document.getElementById('game-ui');
+        const questionTrackerElement = document.getElementById('question-tracker');
+        const dashboard = document.getElementById('dashboard');
+        const dashboardSummary = document.getElementById('dashboard-summary');
+        const dashboardResults = document.getElementById('dashboard-results');
+        const playAgainBtn = document.getElementById('play-again-btn');
+        const feedbackToggle = document.getElementById('feedback-toggle');
+        const statScore = document.getElementById('stat-score');
+        const statCorrect = document.getElementById('stat-correct');
+        const statIncorrect = document.getElementById('stat-incorrect');
+        const statAvgTime = document.getElementById('stat-avg-time');
+        const watchDemoHeaderBtn = document.getElementById('watch-demo-header-btn');
+        const demoFromStartBtn = document.getElementById('demo-from-start-btn');
+        const firstTimePrompt = document.getElementById('first-time-prompt');
+        const promptWatchDemo = document.getElementById('prompt-watch-demo');
+        const promptSkipDemo = document.getElementById('prompt-skip-demo');
+
+        let bubbles = [], selected = [], questionResults = [];
+        let timer, timeLeft = 10, currentQuestion = 1, score = 0, isGameActive = false;
+        const totalQuestions = 25;
+        let demoInstance = null;
+
+        // Difficulty progression using expressions
+        function generateExpressions(level) {
+            const expressions = [];
+            const existingValues = new Set();
+            const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+            while (expressions.length < 3) {
+                let expr, value;
+                try {
+                    if (level <= 5) { // Level 1-5: Basic Integers
+                        const a = randomInt(1, 15);
+                        const b = randomInt(1, 15);
+                        expr = `${a} ${['+', '-'][randomInt(0, 1)]} ${b}`;
+                    } else if (level <= 10) { // Level 6-10: Integers with Multiplication
+                        const a = randomInt(5, 25);
+                        const b = randomInt(2, 10);
+                        expr = `${a} ${['+', '-', '*'][randomInt(0, 2)]} ${b}`;
+                    } else if (level <= 15) { // Level 11-15: Introduce division that creates floats
+                        if (expressions.length % 2 === 0) {
+                            let a = randomInt(10, 40);
+                            let b = randomInt(2, 8);
+                            while (a % b === 0) { a = randomInt(10, 40); }
+                            expr = `${a} / ${b}`;
+                        } else {
+                            expr = `${randomInt(5, 25)} * ${randomInt(2, 10)}`;
+                        }
+                    } else if (level <= 20) { // Level 16-20: Combinations
+                        const type = randomInt(1, 2);
+                        if (type === 1) { // (a*b)/c
+                            let a = randomInt(5, 15);
+                            let b = randomInt(3, 10);
+                            let c = randomInt(2, 8);
+                            while ((a * b) % c === 0) { c = randomInt(2, 8); }
+                            expr = `(${a} * ${b}) / ${c}`;
+                        } else { // a/b + c
+                            let a = randomInt(20, 50);
+                            let b = randomInt(2, 8);
+                            while (a % b === 0) { a = randomInt(20, 50); }
+                            expr = `${a} / ${b} + ${randomInt(1, 15)}`;
+                        }
+                    } else { // Level 21-25: Complex Parentheses
+                        const type = randomInt(1, 2);
+                        if (type === 1) { // (a+b)/c
+                            let a = randomInt(10, 30);
+                            let b = randomInt(5, 25);
+                            let c = randomInt(2, 10);
+                            while ((a + b) % c === 0) { c = randomInt(2, 10); }
+                            expr = `(${a} + ${b}) / ${c}`;
+                        } else { // (a*b) - c/d
+                            let c = randomInt(10, 40);
+                            let d = randomInt(2, 8);
+                            while (c % d === 0) { c = randomInt(10, 40); }
+                            expr = `(${randomInt(5, 10)} * ${randomInt(3, 8)}) - ${c}/${d}`;
+                        }
+                    }
+
+                    value = parseFloat(eval(expr).toFixed(2));
+
+                    if (isFinite(value) && !isNaN(value) && !existingValues.has(value)) {
+                        expressions.push({ expr, value });
+                        existingValues.add(value);
+                    }
+                } catch (e) {
+                    console.error('Error generating expression:', e);
+                }
+            }
+            return expressions;
+        }
+
+        function createBubbles() {
+            bubblesContainer.innerHTML = '';
+            bubbles = generateExpressions(currentQuestion);
+            const shuffledBubbles = [...bubbles].sort(() => Math.random() - 0.5);
+
+            shuffledBubbles.forEach((bubble) => {
+                const div = document.createElement('div');
+                div.className = 'bubble text-white rounded-full shadow-lg bubble-initial';
+                div.textContent = bubble.expr;
+                div.dataset.value = bubble.value;
+
+                if (bubble.expr.length > 16) {
+                    div.style.fontSize = '0.9rem';
+                } else if (bubble.expr.length > 12) {
+                    div.style.fontSize = '1.1rem';
+                } else if (bubble.expr.length > 8) {
+                    div.style.fontSize = '1.25rem';
+                } else {
+                    div.style.fontSize = '1.45rem';
+                }
+
+                div.addEventListener('click', handleBubbleClick);
+                bubblesContainer.appendChild(div);
+            });
+        }
+
+        function handleBubbleClick(e) {
+            if (!isGameActive) return;
+            const target = e.currentTarget;
+            const value = parseFloat(target.dataset.value);
+            const index = selected.findIndex(item => item.value === value);
+
+            if (index === -1) {
+                selected.push({ value, element: target });
+                target.classList.replace('bubble-initial', 'bubble-selected');
+            } else {
+                selected.splice(index, 1);
+                target.classList.replace('bubble-selected', 'bubble-initial');
+            }
+
+            if (selected.length === 3) {
+                isGameActive = false;
+                checkOrder();
+            }
+        }
+
+        function checkOrder() {
+            clearInterval(timer);
+            const sortedValues = [...bubbles].sort((a, b) => a.value - b.value).map(b => b.value);
+            const isCorrect = selected.every((sel, i) => Math.abs(sel.value - sortedValues[i]) < 0.01);
+            if (isCorrect) score++;
+
+            questionResults.push({
+                question: currentQuestion,
+                expressions: bubbles.map(b => b.expr),
+                correctOrder: [...bubbles].sort((a, b) => a.value - b.value),
+                userOrder: selected.map(sel => bubbles.find(b => Math.abs(b.value - sel.value) < 0.01) || { expr: '?', value: sel.value }),
+                status: isCorrect ? 'correct' : 'incorrect',
+            });
+
+            if (feedbackToggle.checked) {
+                messageElement.textContent = isCorrect ? 'Correct!' : 'Incorrect!';
+                messageElement.className = `text-2xl font-bold text-center mt-4 min-h-[3rem] ${isCorrect ? 'text-emerald-400' : 'text-rose-400'}`;
+                bubblesContainer.querySelectorAll('.bubble').forEach(b => {
+                    b.classList.remove('bubble-initial', 'bubble-selected');
+                    b.classList.add(isCorrect ? 'bg-emerald-500' : 'bg-rose-500');
+                });
+            }
+            setTimeout(nextQuestion, feedbackToggle.checked ? 1400 : 400);
+        }
+
+        function handleTimeout() {
+            clearInterval(timer);
+            isGameActive = false;
+            questionResults.push({
+                question: currentQuestion,
+                expressions: bubbles.map(b => b.expr),
+                correctOrder: [...bubbles].sort((a, b) => a.value - b.value),
+                userOrder: selected.map(sel => bubbles.find(b => Math.abs(b.value - sel.value) < 0.01)),
+                status: 'timeout',
+            });
+
+            if (feedbackToggle.checked) {
+                messageElement.textContent = "Time's up!";
+                messageElement.className = 'text-2xl font-bold text-center mt-4 min-h-[3rem] text-amber-400';
+                bubblesContainer.querySelectorAll('.bubble').forEach(b => {
+                    b.classList.remove('bubble-initial', 'bubble-selected');
+                    b.classList.add('bg-slate-700');
+                });
+            }
+            setTimeout(nextQuestion, feedbackToggle.checked ? 1800 : 400);
+        }
+
+        function nextQuestion() {
+            if (currentQuestion < totalQuestions) {
+                currentQuestion++;
+                selected = [];
+                messageElement.textContent = '';
+                messageElement.className = 'text-2xl font-bold text-center mt-4 min-h-[3rem]';
+                updateQuestionTracker();
+                createBubbles();
+                startTimer();
+            } else {
+                endGame();
+            }
+        }
+
+        function startTimer() {
+            isGameActive = true;
+            timeLeft = 10;
+            timerElement.textContent = `Time: ${timeLeft.toFixed(1)}s`;
+            progressBar.style.width = '100%';
+            let startTime = Date.now();
+            timer = setInterval(() => {
+                let elapsed = (Date.now() - startTime) / 1000;
+                timeLeft = Math.max(10 - elapsed, 0);
+                timerElement.textContent = `Time: ${timeLeft.toFixed(1)}s`;
+                progressBar.style.width = `${(timeLeft / 10) * 100}%`;
+                if (timeLeft <= 0) handleTimeout();
+            }, 100);
+        }
+
+        function updateQuestionTracker() {
+            questionTrackerElement.textContent = `Question: ${currentQuestion}/${totalQuestions}`;
+        }
+
+        function endGame() {
+            gameUI.classList.add('hidden');
+            bubblesContainer.innerHTML = '';
+            messageElement.textContent = '';
+            const percentage = ((score / totalQuestions) * 100);
+            let summaryText = '', performanceTier = '';
+
+            if (percentage === 100) {
+                performanceTier = '<span class="text-amber-400 font-bold">Excellent!</span> Perfect score!';
+                confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
+            } else if (percentage >= 90) {
+                performanceTier = '<span class="text-emerald-400 font-bold">Very Good!</span>';
+                confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+            } else if (percentage >= 80) {
+                performanceTier = '<span class="text-sky-400 font-bold">Good!</span>';
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            } else if (percentage >= 70) {
+                performanceTier = '<span class="text-indigo-400 font-bold">Congratulations, you passed!</span>';
+                confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+            } else {
+                performanceTier = '<span class="text-rose-400 font-bold">Keep practicing!</span>';
+            }
+            summaryText = `You scored ${percentage.toFixed(0)}%. ${performanceTier}`;
+            dashboardSummary.innerHTML = summaryText;
+
+            const correctCount = questionResults.filter(r => r.status === 'correct').length;
+            const incorrectCount = totalQuestions - correctCount;
+
+            statScore.textContent = `${score}/${totalQuestions}`;
+            statCorrect.textContent = correctCount;
+            statIncorrect.textContent = incorrectCount;
+            statAvgTime.textContent = '25';
+
+            dashboardResults.innerHTML = '';
+            questionResults.forEach(result => {
+                const row = document.createElement('tr');
+                row.className = "border-b border-slate-800 hover:bg-slate-800/40";
+                const resultText = { correct: 'Correct', incorrect: 'Incorrect', timeout: 'Timed Out' };
+                const resultColor = { correct: 'text-emerald-400', incorrect: 'text-rose-400', timeout: 'text-amber-400' };
+                row.innerHTML = `
+                    <td class="p-3 font-mono font-bold">${result.question}</td>
+                    <td class="p-3">${result.expressions.join(', ')}</td>
+                    <td class="p-3">${result.correctOrder.map(b => `${b.expr} (${b.value})`).join(',<br>')}</td>
+                    <td class="p-3">${result.userOrder && result.userOrder.length > 0 ? result.userOrder.map(b => b ? `${b.expr} (${b.value})` : 'N/A').join(',<br>') : 'None'}</td>
+                    <td class="p-3 font-semibold ${resultColor[result.status]}">${resultText[result.status]}</td>
+                `;
+                dashboardResults.appendChild(row);
+            });
+            dashboard.classList.remove('hidden');
+        }
+
+        const sessionPlaysBadge = document.getElementById('session-plays-badge');
+        const playsLeftCount = document.getElementById('plays-left-count');
+
+        // Listen for session info from parent platform
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'GAME_SESSION_INFO') {
+                if (e.data.totalChances !== undefined && sessionPlaysBadge && playsLeftCount) {
+                    playsLeftCount.textContent = e.data.totalChances;
+                    sessionPlaysBadge.classList.remove('hidden');
+                }
+            }
+        });
+        try { window.parent.postMessage({ type: 'GET_GAME_SESSION_INFO' }, '*'); } catch (e) {}
+
+        function startGame() {
+            currentQuestion = 1; score = 0; selected = []; questionResults = [];
+            messageElement.textContent = '';
+            dashboard.classList.add('hidden');
+            startScreen.classList.add('hidden');
+            firstTimePrompt.style.display = 'none';
+            gameUI.classList.remove('hidden');
+            updateQuestionTracker();
+            createBubbles();
+            startTimer();
+        }
+
+        function requestStartBubbleGame() {
+            if (typeof window.requestNewGameSession === 'function') {
+                window.requestNewGameSession('bubble-sort', (res) => {
+                    startGame();
+                    if (res && res.remainingChances !== undefined && playsLeftCount) {
+                        playsLeftCount.textContent = res.remainingChances;
+                    }
+                }, (denied) => {
+                    alert(denied.message || 'No plays available. Please recharge your account!');
+                });
+            } else {
+                startGame();
+            }
+        }
+
+        startBtn.addEventListener('click', requestStartBubbleGame);
+        playAgainBtn.addEventListener('click', requestStartBubbleGame);
+
+        // --- DEMO INITIALIZATION ---
+        function launchDemo() {
+            if (!demoInstance) {
+                demoInstance = window.initBubbleGameDemo({
+                    onSkip: () => {
+                        console.log('Bubble Sort Demo Skipped');
+                    },
+                    onComplete: () => {
+                        console.log('Bubble Sort Demo Completed');
+                    }
+                });
+            }
+            demoInstance.start();
+        }
+
+        watchDemoHeaderBtn.addEventListener('click', launchDemo);
+        demoFromStartBtn.addEventListener('click', launchDemo);
+
+        if (promptWatchDemo) {
+            promptWatchDemo.addEventListener('click', () => {
+                firstTimePrompt.style.display = 'none';
+                launchDemo();
+            });
+        }
+
+        if (promptSkipDemo) {
+            promptSkipDemo.addEventListener('click', () => {
+                firstTimePrompt.style.display = 'none';
+                localStorage.setItem('watched_demo_bubble-sort', 'true');
+            });
+        }
+
+        // Check if first time or triggered via ?demo=1
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('demo') === '1' || urlParams.get('demo') === 'true') {
+            setTimeout(launchDemo, 200);
+        } else if (!localStorage.getItem('watched_demo_bubble-sort')) {
+            firstTimePrompt.style.display = 'flex';
+        }
+    </script>
+</body>
+
+</html>
