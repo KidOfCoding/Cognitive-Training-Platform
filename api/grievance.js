@@ -1,5 +1,5 @@
-import connectToDatabase from './db.js';
-import Grievance from './models/Grievance.js';
+import connectToDatabase from '../lib/db.js';
+import Grievance from '../lib/models/Grievance.js';
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
 dotenv.config();

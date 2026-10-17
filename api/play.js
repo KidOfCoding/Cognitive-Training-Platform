@@ -1,6 +1,6 @@
-import connectToDatabase from './db.js';
-import User from './models/User.js';
-import { isCollegeEmail } from './utils/emailValidator.js';
+import connectToDatabase from '../lib/db.js';
+import User from '../lib/models/User.js';
+import { isCollegeEmail } from '../lib/utils/emailValidator.js';
 
 const SESSION_TIMEOUT_MS = Number(process.env.SESSION_TIMEOUT_MS || 60 * 1000);
 

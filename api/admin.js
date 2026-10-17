@@ -1,7 +1,7 @@
-import connectToDatabase from './db.js';
-import User from './models/User.js';
-import Grievance from './models/Grievance.js';
-import CollegeRequest from './models/CollegeRequest.js';
+import connectToDatabase from '../lib/db.js';
+import User from '../lib/models/User.js';
+import Grievance from '../lib/models/Grievance.js';
+import CollegeRequest from '../lib/models/CollegeRequest.js';
 import dotenv from 'dotenv';
 dotenv.config();
 

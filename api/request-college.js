@@ -1,5 +1,5 @@
-import connectToDatabase from './db.js';
-import CollegeRequest from './models/CollegeRequest.js';
+import connectToDatabase from '../lib/db.js';
+import CollegeRequest from '../lib/models/CollegeRequest.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);

@@ -1,8 +1,8 @@
 import crypto from 'crypto';
-import connectToDatabase from './db.js';
-import User from './models/User.js';
-import { isCollegeEmail } from './utils/emailValidator.js';
-import { getPaidChancesPack, getPaidChancesPrice } from './utils/chanceConfig.js';
+import connectToDatabase from '../lib/db.js';
+import User from '../lib/models/User.js';
+import { isCollegeEmail } from '../lib/utils/emailValidator.js';
+import { getPaidChancesPack, getPaidChancesPrice } from '../lib/utils/chanceConfig.js';
 import dotenv from 'dotenv';
 dotenv.config();
 

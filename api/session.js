@@ -1,7 +1,7 @@
-import connectToDatabase from './db.js';
-import User from './models/User.js';
-import { isCollegeEmail } from './utils/emailValidator.js';
-import { getFreeChancesPerGame } from './utils/chanceConfig.js';
+import connectToDatabase from '../lib/db.js';
+import User from '../lib/models/User.js';
+import { isCollegeEmail } from '../lib/utils/emailValidator.js';
+import { getFreeChancesPerGame } from '../lib/utils/chanceConfig.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
