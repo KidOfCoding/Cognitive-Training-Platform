@@ -1,18 +1,16 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [
+  "redirects": [
     {
       "source": "/",
-      "destination": "/welcome.html"
+      "destination": "/welcome.html",
+      "permanent": false
     },
     {
       "source": "/welcome",
-      "destination": "/welcome.html"
-    },
-    {
-      "source": "/index",
-      "destination": "/index.html"
+      "destination": "/welcome.html",
+      "permanent": true
     }
   ],
   "headers": [
