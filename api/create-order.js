@@ -62,17 +62,6 @@ export default async function handler(req, res) {
       });
     }
 
-    const MAX_ALLOWED_DEVICES = Number(process.env.MAX_ALLOWED_DEVICES || 2);
-    if (user && deviceId && user.allowedDevices && user.allowedDevices.length >= MAX_ALLOWED_DEVICES) {
-      const isKnown = user.allowedDevices.some(d => d.deviceId === deviceId);
-      if (!isKnown) {
-        return res.status(403).json({
-          error: 'DEVICE_LIMIT_EXCEEDED',
-          message: 'Unauthorized device: This account is restricted to 2 registered devices.'
-        });
-      }
-    }
-
     const razorpay = new Razorpay({
       key_id: keyId,
       key_secret: keySecret,

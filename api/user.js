@@ -2,9 +2,6 @@ import connectToDatabase from '../lib/db.js';
 import User from '../lib/models/User.js';
 import { isCollegeEmail } from '../lib/utils/emailValidator.js';
 import { getFreeChancesPerGame, getPaidChancesPack, getPaidChancesPrice } from '../lib/utils/chanceConfig.js';
-
-const SESSION_TIMEOUT_MS = Number(process.env.SESSION_TIMEOUT_MS || 60 * 1000);
-
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -79,13 +76,6 @@ export default async function handler(req, res) {
         clerkUserId: userId,
         email,
         name,
-        activeSessionId: deviceId || null,
-        activeSessionLastSeen: deviceId ? new Date() : null,
-        allowedDevices: deviceId ? [{
-          deviceId,
-          registeredAt: new Date(),
-          lastUsedAt: new Date(),
-        }] : [],
         freeChances: {
           'path-finder': defaultFree,
           'bubble-sort': defaultFree,

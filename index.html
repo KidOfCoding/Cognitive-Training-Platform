@@ -230,117 +230,6 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════════
-       CONCURRENT SESSION GATE
-       ══════════════════════════════════════════════════════ -->
-  <div id="concurrent-session-page"
-    class="gate-screen hidden min-h-screen w-full flex-col items-center justify-center p-6 text-center">
-    <div class="gate-card gate-card--amber">
-      <div class="gate-icon gate-icon--amber">
-        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-      </div>
-      <h1 class="gate-title">Active on Another Device</h1>
-      <p class="gate-description">
-        Simultaneous logins are disabled. This account is currently active on another device or browser window.
-      </p>
-
-      <div class="gate-info-panel">
-        <div class="gate-info-row">
-          <span class="gate-info-label">Account</span>
-          <span id="concurrent-email-display" class="gate-info-value"
-            style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">student@college.ac.in</span>
-        </div>
-        <div class="gate-info-row">
-          <span class="gate-info-label">Status</span>
-          <span class="badge badge--amber">
-            <span class="pulse-dot pulse-dot--amber"></span>
-            Active Session
-          </span>
-        </div>
-        <hr class="gate-divider">
-        <p class="gate-footnote">To access your account on this device, close the active tab/window or sign out on your
-          other device. Or click <strong style="color: rgba(255,255,255,0.65)">Continue on This Device</strong> to take
-          over.</p>
-      </div>
-
-      <div class="w-full flex flex-col gap-2.5">
-        <button id="concurrent-takeover-btn" class="btn btn--primary btn--full">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-          <span>Continue on This Device</span>
-        </button>
-        <button id="concurrent-retry-btn" class="btn btn--secondary btn--full">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          <span id="concurrent-retry-text">Check Availability</span>
-        </button>
-        <button id="concurrent-sign-out-btn" class="btn btn--ghost btn--full">Sign Out</button>
-      </div>
-      <p id="concurrent-auto-retry-notice" class="text-xs mt-4" style="color: rgba(255,255,255,0.28)"></p>
-    </div>
-  </div>
-
-  <!-- ══════════════════════════════════════════════════════
-       DEVICE LIMIT EXCEEDED GATE
-       ══════════════════════════════════════════════════════ -->
-  <div id="device-limit-page"
-    class="gate-screen hidden min-h-screen w-full flex-col items-center justify-center p-6 text-center">
-    <div class="gate-card gate-card--rose">
-      <div class="gate-icon gate-icon--rose">
-        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-        </svg>
-      </div>
-      <h1 class="gate-title">Device Limit Reached</h1>
-      <p class="gate-description">
-        This account is permitted on <strong style="color: rgba(255,255,255,0.75)">maximum two registered
-          devices</strong>. Access from this new device is blocked.
-      </p>
-
-      <div class="gate-info-panel">
-        <div class="gate-info-row">
-          <span class="gate-info-label">Account</span>
-          <span id="device-limit-email-display" class="gate-info-value"
-            style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">student@college.ac.in</span>
-        </div>
-        <div class="gate-info-row">
-          <span class="gate-info-label">Registered Slots</span>
-          <span class="badge badge--rose">2 of 2 Used</span>
-        </div>
-        <div class="gate-info-row">
-          <span class="gate-info-label">Status</span>
-          <span class="badge badge--rose">Blocked</span>
-        </div>
-        <hr class="gate-divider">
-        <p class="gate-footnote">Using a new browser or restarted your dev session? Click below to authorize this browser and reset registered slots.</p>
-      </div>
-
-      <div class="w-full flex flex-col gap-2.5">
-        <button id="device-limit-reset-btn" class="btn btn--primary btn--full">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          <span id="device-limit-reset-label">Authorize This Device (Reset Slots)</span>
-        </button>
-        <button id="device-limit-sign-out-btn" class="btn btn--danger btn--full">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          <span>Sign Out</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══════════════════════════════════════════════════════
        MAIN APP CONTAINER
        ══════════════════════════════════════════════════════ -->
   <div id="app-container" class="hidden">
@@ -628,7 +517,7 @@
                   </div>
                   <h4 class="welcome-pillar-title">Verified Session Integrity</h4>
                   <p class="welcome-pillar-text">
-                    Single-active-device concurrency and institutional email validation ensure every assessment score is
+                    Institutional email validation and encrypted session security ensure every assessment score is
                     authentic, verifiable, and free of interference.
                   </p>
                 </div>

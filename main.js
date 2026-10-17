@@ -31,14 +31,6 @@ if (crossTabChannel) {
       if (data.freeChances) userState.freeChances = data.freeChances;
       if (data.paidChances !== undefined) userState.paidChances = data.paidChances;
       updateUI();
-    } else if (data.type === 'SESSION_REVOKED') {
-      if (data.sourceDeviceId && data.sourceDeviceId === deviceId) {
-        // Same browser/device tabs must not revoke each other
-        return;
-      }
-      stopHeartbeat();
-      stopAutoRetry();
-      showConcurrentDevicePage(currentUser?.primaryEmailAddress?.emailAddress || '');
     }
   };
 }
@@ -305,21 +297,6 @@ const collegeEmailRequiredPage = document.getElementById('college-email-required
 const deniedEmailDisplay = document.getElementById('denied-email-display');
 const emailDeniedSignOutBtn = document.getElementById('email-denied-sign-out');
 
-// Concurrent Session Elements (1 Device Active at a Time)
-const concurrentSessionPage = document.getElementById('concurrent-session-page');
-const concurrentEmailDisplay = document.getElementById('concurrent-email-display');
-const concurrentTakeoverBtn = document.getElementById('concurrent-takeover-btn');
-const concurrentRetryBtn = document.getElementById('concurrent-retry-btn');
-const concurrentRetryText = document.getElementById('concurrent-retry-text');
-const concurrentSignOutBtn = document.getElementById('concurrent-sign-out-btn');
-const concurrentAutoRetryNotice = document.getElementById('concurrent-auto-retry-notice');
-
-// Device Limit Elements (Strict 2 Devices Policy)
-const deviceLimitPage = document.getElementById('device-limit-page');
-const deviceLimitEmailDisplay = document.getElementById('device-limit-email-display');
-const deviceLimitResetBtn = document.getElementById('device-limit-reset-btn');
-const deviceLimitResetLabel = document.getElementById('device-limit-reset-label');
-const deviceLimitSignOutBtn = document.getElementById('device-limit-sign-out-btn');
 const gameActiveNav = document.getElementById('game-active-nav');
 const exitGameToDashboardBtn = document.getElementById('exit-game-to-dashboard-btn');
 
@@ -396,12 +373,10 @@ let userState = {
 
 // --- VIEW MANAGEMENT ---
 function switchView(view) {
-  // view: 'sign-in' | 'college-denied' | 'concurrent-denied' | 'device-limit-denied' | 'app'
+  // view: 'sign-in' | 'college-denied' | 'app'
   const screens = [
     { el: signInPage, name: 'sign-in' },
     { el: collegeEmailRequiredPage, name: 'college-denied' },
-    { el: concurrentSessionPage, name: 'concurrent-denied' },
-    { el: deviceLimitPage, name: 'device-limit-denied' },
     { el: appContainer, name: 'app' },
   ];
 
@@ -581,19 +556,8 @@ async function syncUserWithDB(user) {
       }),
     });
 
-    if (res.status === 409) {
-      if (crossTabChannel) crossTabChannel.postMessage({ type: 'SESSION_REVOKED', sourceDeviceId: deviceId });
-      showConcurrentDevicePage(user.primaryEmailAddress?.emailAddress || '');
-      return false;
-    }
-
     if (res.status === 403) {
-      const errData = await res.json().catch(() => ({}));
-      if (errData.error === 'DEVICE_LIMIT_EXCEEDED') {
-        showDeviceLimitPage(user.primaryEmailAddress?.emailAddress || '', errData.allowedDevices || []);
-      } else {
-        showCollegeDeniedPage(user.primaryEmailAddress?.emailAddress || '');
-      }
+      showCollegeDeniedPage(user.primaryEmailAddress?.emailAddress || '');
       return false;
     }
 
@@ -625,17 +589,6 @@ async function requestPlayGame(gameId) {
       }),
     });
     const data = await res.json();
-
-    if (res.status === 403 && data.error === 'DEVICE_LIMIT_EXCEEDED') {
-      showDeviceLimitPage(currentUser?.primaryEmailAddress?.emailAddress || '', data.allowedDevices || []);
-      return { allowed: false, message: data.message };
-    }
-
-    if (res.status === 403 && (data.error === 'ACTIVE_SESSION_EXISTS' || data.error === 'SESSION_REVOKED')) {
-      if (crossTabChannel) crossTabChannel.postMessage({ type: 'SESSION_REVOKED', sourceDeviceId: deviceId });
-      showConcurrentDevicePage(currentUser?.primaryEmailAddress?.emailAddress || '');
-      return { allowed: false, message: data.message };
-    }
 
     if (res.status === 403 && data.error === 'COLLEGE_EMAIL_REQUIRED') {
       showCollegeDeniedPage(currentUser?.primaryEmailAddress?.emailAddress || '');
@@ -1079,34 +1032,7 @@ async function startApp() {
       emailDeniedSignOutBtn.addEventListener('click', handleReturnToSignIn);
     }
 
-    if (concurrentTakeoverBtn) {
-      concurrentTakeoverBtn.addEventListener('click', triggerSessionTakeover);
-    }
 
-    if (concurrentSignOutBtn) {
-      concurrentSignOutBtn.addEventListener('click', async () => {
-        if (currentUser) releaseDeviceSession(currentUser.id);
-        stopAutoRetry();
-        await clerk.signOut({ redirectUrl: window.location.origin + '/index.html' });
-      });
-    }
-
-    if (deviceLimitResetBtn) {
-      deviceLimitResetBtn.addEventListener('click', triggerDeviceReset);
-    }
-
-    if (deviceLimitSignOutBtn) {
-      deviceLimitSignOutBtn.addEventListener('click', async () => {
-        if (currentUser) releaseDeviceSession(currentUser.id);
-        stopAutoRetry();
-        stopHeartbeat();
-        await clerk.signOut({ redirectUrl: window.location.origin + '/index.html' });
-      });
-    }
-
-    if (concurrentRetryBtn) {
-      concurrentRetryBtn.addEventListener('click', triggerSessionRetry);
-    }
 
     if (exitGameToDashboardBtn) {
       exitGameToDashboardBtn.addEventListener('click', () => {
