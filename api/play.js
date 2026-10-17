@@ -60,49 +60,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Check device authorization (max 2 devices)
-    const MAX_ALLOWED_DEVICES = Number(process.env.MAX_ALLOWED_DEVICES || 2);
-    if (deviceId) {
-      if (!user.allowedDevices) {
-        user.allowedDevices = [];
-      }
-      const isKnown = user.allowedDevices.some(d => d.deviceId === deviceId);
-      if (!isKnown) {
-        if (user.allowedDevices.length >= MAX_ALLOWED_DEVICES) {
-          return res.status(403).json({
-            allowed: false,
-            error: 'DEVICE_LIMIT_EXCEEDED',
-            message: `Device unauthorized: This account has reached its limit of ${MAX_ALLOWED_DEVICES} registered devices.`,
-            allowedDevices: user.allowedDevices,
-          });
-        }
-        user.allowedDevices.push({
-          deviceId,
-          registeredAt: new Date(),
-          lastUsedAt: new Date(),
-        });
-      }
-    }
-
-    // Check device session concurrency
-    const now = Date.now();
-    const isSessionExpired = !user.activeSessionLastSeen ||
-      (now - new Date(user.activeSessionLastSeen).getTime() > SESSION_TIMEOUT_MS);
-
-    if (deviceId && user.activeSessionId && user.activeSessionId !== deviceId && !isSessionExpired) {
-      return res.status(403).json({
-        allowed: false,
-        error: 'ACTIVE_SESSION_EXISTS',
-        message: 'This account is currently active on another device.',
-      });
-    }
-
-    // Update active heartbeat for this device
-    if (deviceId) {
-      user.activeSessionId = deviceId;
-      user.activeSessionLastSeen = new Date();
-    }
-
     const toPlainObject = (container) => {
       if (!container) return {};
       if (typeof container.entries === 'function') {

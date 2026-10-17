@@ -74,6 +74,19 @@ function calculateTotalChances(state = userState) {
   return total;
 }
 
+// Calculate available chances for a specific game
+function calculateGameChances(state = userState, gameId) {
+  if (!state || !gameId) return 0;
+  const free = Number(state.freeChances?.[gameId]) || 0;
+  let paid = 0;
+  if (typeof state.paidChances === 'object' && state.paidChances !== null) {
+    paid = Number(state.paidChances[gameId]) || 0;
+  } else {
+    paid = Number(state.paidChances) || 0;
+  }
+  return Math.max(0, free) + Math.max(0, paid);
+}
+
 // Helper: Formats user agent strings into readable device labels
 function formatDeviceName(userAgentStr) {
   if (!userAgentStr) return 'Registered Device';
@@ -95,6 +108,52 @@ function formatDeviceName(userAgentStr) {
   return browser ? `${os} (${browser})` : os;
 }
 
+const DEFAULT_ALLOWED_DOMAINS = [
+  'cgu-odisha.ac.in',
+  'iitbbs.ac.in',
+  'iiit-bh.ac.in',
+  'outr.ac.in',
+  'bput.ac.in',
+  'kiit.ac.in',
+  'soa.ac.in',
+  'cutm.ac.in',
+  'silicon.ac.in',
+  'gita.edu.in',
+  'gift.edu.in',
+  'gec.edu.in',
+  'trident.ac.in',
+  'bit.edu.in',
+  'becbbsr.ac.in',
+  'aryan.ac.in',
+  'koustuvgroup.ac.in',
+  'hit.ac.in',
+  'indus.ac.in',
+  'kmbb.in'
+];
+
+function getAllowedDomainsList() {
+  const envDomainsStr = String(
+    import.meta.env.VITE_ALLOWED_EMAIL_DOMAINS || DEFAULT_ALLOWED_DOMAINS.join(',')
+  ).trim();
+
+  const entries = envDomainsStr
+    .split(',')
+    .map(d => d.trim().toLowerCase().replace(/^@/, ''))
+    .filter(Boolean);
+
+  return entries.length > 0 ? entries : DEFAULT_ALLOWED_DOMAINS;
+}
+
+function isAllowAllCollegesActive() {
+  const allowAllVal = String(
+    import.meta.env.VITE_ALLOW_ALL_COLLEGES ??
+    import.meta.env.VITE_ALLOW_ALL_UNIVERSITIES ??
+    ''
+  ).trim().toLowerCase();
+
+  return allowAllVal === '1' || allowAllVal === 'true' || allowAllVal === 'yes';
+}
+
 // Helper: Verify whether an email address is from an official college/university domain
 function isCollegeEmail(email) {
   if (!email || typeof email !== 'string') return false;
@@ -105,45 +164,101 @@ function isCollegeEmail(email) {
   const domain = cleanEmail.slice(atIdx + 1);
   if (!domain || domain.includes(' ') || !domain.includes('.') || domain.includes('..') || domain.startsWith('.') || domain.endsWith('.')) return false;
 
-  // 1. Check custom domains specified via environment variable (comma-separated)
-  const envDomainsStr = import.meta.env.VITE_ALLOWED_EMAIL_DOMAINS || '';
-  const customDomains = envDomainsStr
-    .split(',')
-    .map(d => d.trim().toLowerCase().replace(/^@/, ''))
-    .filter(Boolean);
+  // 1. Check custom domains/emails specified via environment variable
+  const customAllowedEntries = getAllowedDomainsList();
 
-  if (customDomains.some(custom => domain === custom || domain.endsWith('.' + custom))) {
+  const matchesCustom = customAllowedEntries.some(entry => {
+    if (entry.includes('@')) {
+      return cleanEmail === entry;
+    }
+    return domain === entry || domain.endsWith('.' + entry);
+  });
+
+  if (matchesCustom) {
     return true;
   }
 
-  // 2. Reject common public consumer webmail domains
-  const publicMailProviders = [
-    'gmail.com',
-    'googlemail.com',
-    'yahoo.com',
-    'yahoo.co.in',
-    'outlook.com',
-    'hotmail.com',
-    'live.com',
-    'icloud.com',
-    'aol.com',
-    'proton.me',
-    'protonmail.com',
-    'zoho.com'
-  ];
-  if (publicMailProviders.includes(domain)) {
+  // 2. If toggle ALLOW_ALL_COLLEGES=1 is set, allow any accredited university (.edu, .ac.in, etc.)
+  if (isAllowAllCollegesActive()) {
+    const publicMailProviders = [
+      'gmail.com',
+      'googlemail.com',
+      'yahoo.com',
+      'yahoo.co.in',
+      'outlook.com',
+      'hotmail.com',
+      'live.com',
+      'icloud.com',
+      'aol.com',
+      'proton.me',
+      'protonmail.com',
+      'zoho.com'
+    ];
+    if (publicMailProviders.includes(domain)) {
+      return false;
+    }
+
+    if (domain === 'edu' || /\.edu(\.[a-z]{2,3})?$/i.test(domain)) {
+      return true;
+    }
+    if (domain === 'ac' || /\.ac(\.[a-z]{2,3})?$/i.test(domain)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+const PERSONAL_EMAIL_PROVIDERS = [
+  'gmail.com',
+  'googlemail.com',
+  'yahoo.com',
+  'yahoo.co.in',
+  'yahoo.in',
+  'ymail.com',
+  'outlook.com',
+  'hotmail.com',
+  'live.com',
+  'msn.com',
+  'icloud.com',
+  'me.com',
+  'mac.com',
+  'aol.com',
+  'proton.me',
+  'protonmail.com',
+  'zoho.com',
+  'mail.com',
+  'gmx.com',
+  'yandex.com',
+  'rediffmail.com'
+];
+
+function isEducationEmail(email) {
+  if (!email || typeof email !== 'string') return false;
+  const cleanEmail = email.trim().toLowerCase();
+  const atIdx = cleanEmail.lastIndexOf('@');
+  if (atIdx === -1) return false;
+
+  const domain = cleanEmail.slice(atIdx + 1);
+  if (!domain || domain.includes(' ') || !domain.includes('.') || domain.startsWith('.') || domain.endsWith('.')) return false;
+
+  // 1. If in personal provider list, it's definitely not an education email
+  if (PERSONAL_EMAIL_PROVIDERS.includes(domain)) {
     return false;
   }
 
-  // 3. Educational domains (.edu, .edu.in, .edu.au, etc.)
-  // Must strictly terminate with .edu or .edu.<country-code>
-  if (domain === 'edu' || /\.edu(\.[a-z]{2,3})?$/i.test(domain)) {
+  // 2. If in allowed list, it's an education email
+  const customAllowed = getAllowedDomainsList();
+  if (customAllowed.some(entry => entry === domain || domain.endsWith('.' + entry) || cleanEmail === entry)) {
     return true;
   }
 
-  // 4. Academic ccTLDs (.ac.in, .ac.uk, .ac.nz, .ac.za, .ac.jp, etc.)
-  // Must strictly terminate with .ac or .ac.<country-code>
-  if (domain === 'ac' || /\.ac(\.[a-z]{2,3})?$/i.test(domain)) {
+  // 3. Academic TLD patterns (.edu, .edu.in, .ac.in, .ac.uk, etc.)
+  if (domain === 'edu' || /\.edu(\.[a-z]{2,3})?$/i.test(domain) || domain.includes('.edu.')) {
+    return true;
+  }
+
+  if (domain === 'ac' || /\.ac(\.[a-z]{2,3})?$/i.test(domain) || domain.includes('.ac.')) {
     return true;
   }
 
@@ -302,319 +417,148 @@ function switchView(view) {
   });
 }
 
+
+async function handleReturnToSignIn() {
+  try {
+    if (currentUser) releaseDeviceSession(currentUser.id);
+  } catch (e) {}
+  try {
+    if (clerkInstance) {
+      await clerkInstance.signOut();
+    }
+  } catch (err) {
+    console.warn('Sign out cleanup error:', err);
+  }
+  currentUser = null;
+  switchView('sign-in');
+  if (typeof renderSignIn === 'function') {
+    renderSignIn();
+  }
+  if (!window.location.pathname.endsWith('index.html') && window.location.pathname !== '/index') {
+    window.location.href = window.location.origin + '/index.html';
+  }
+}
+
 function showCollegeDeniedPage(email) {
-  stopHeartbeat();
-  stopAutoRetry();
   if (deniedEmailDisplay) {
     deniedEmailDisplay.textContent = email || 'No Email';
   }
+  const reqEmailInput = document.getElementById('req-college-email');
+  if (reqEmailInput && email) {
+    reqEmailInput.value = email;
+  }
+
+  const deniedTitle = document.getElementById('college-denied-title');
+  const allowedDesc = document.getElementById('college-denied-description');
+  if (deniedTitle) deniedTitle.textContent = 'Campus Service Notice';
+  if (allowedDesc) allowedDesc.textContent = 'Assessments are currently restricted to partner campuses. If not enrolled, request access below:';
+
+  // Ensure request form is visible and feedback is reset
+  const requestForm = document.getElementById('college-request-form');
+  const feedbackBox = document.getElementById('college-request-feedback');
+  if (requestForm) requestForm.classList.remove('hidden');
+  if (feedbackBox) {
+    feedbackBox.classList.add('hidden');
+    feedbackBox.innerHTML = '';
+  }
+
+  // Setup navigation back buttons
+  const topBackBtn = document.getElementById('college-gate-top-back-btn');
+  if (topBackBtn && !topBackBtn.dataset.listenerAttached) {
+    topBackBtn.dataset.listenerAttached = 'true';
+    topBackBtn.addEventListener('click', handleReturnToSignIn);
+  }
+
+  const bottomBackBtn = document.getElementById('email-denied-back-to-signin');
+  if (bottomBackBtn && !bottomBackBtn.dataset.listenerAttached) {
+    bottomBackBtn.dataset.listenerAttached = 'true';
+    bottomBackBtn.addEventListener('click', handleReturnToSignIn);
+  }
+
+  const deniedSignOutBtn = document.getElementById('email-denied-sign-out');
+  if (deniedSignOutBtn && !deniedSignOutBtn.dataset.listenerAttached) {
+    deniedSignOutBtn.dataset.listenerAttached = 'true';
+    deniedSignOutBtn.addEventListener('click', handleReturnToSignIn);
+  }
+
+  // Setup form submit listener once
+  if (requestForm && !requestForm.dataset.listenerAttached) {
+    requestForm.dataset.listenerAttached = 'true';
+    requestForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const collegeName = document.getElementById('req-college-name')?.value?.trim();
+      const userEmail = document.getElementById('req-college-email')?.value?.trim();
+      const submitBtn = document.getElementById('req-college-submit-btn');
+
+      if (!collegeName || !userEmail) return;
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting Request...';
+      }
+
+      try {
+        const res = await fetch('/api/request-college', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ collegeName, email: userEmail }),
+        });
+        const data = await res.json();
+
+        if (feedbackBox) {
+          requestForm.classList.add('hidden');
+          feedbackBox.classList.remove('hidden');
+          feedbackBox.className = 'mt-2 p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-xs text-emerald-300';
+          feedbackBox.innerHTML = `
+            <div class="flex items-start gap-2 text-left">
+              <span class="text-lg flex-shrink-0">🎉</span>
+              <div class="flex-1">
+                <p class="font-bold text-emerald-300 text-xs">Request Successfully Received!</p>
+                <p class="mt-0.5 text-slate-300 text-[11px] leading-snug">
+                  Submitted <strong>${collegeName}</strong>. If verified, access will be activated within <strong>12 hours</strong>.
+                </p>
+                <button type="button" id="feedback-back-to-signin-btn" class="mt-2 w-full py-1.5 px-3 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  <span>Back to Sign In</span>
+                </button>
+              </div>
+            </div>
+          `;
+          document.getElementById('feedback-back-to-signin-btn')?.addEventListener('click', handleReturnToSignIn);
+        }
+        requestForm.reset();
+      } catch (err) {
+        if (feedbackBox) {
+          feedbackBox.classList.remove('hidden');
+          feedbackBox.className = 'mt-2 p-2 rounded-lg bg-rose-950/80 border border-rose-500/40 text-xs text-rose-300';
+          feedbackBox.textContent = 'Unable to send request right now. Please check your connection and try again.';
+        }
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Request Activation (Within 12h)';
+        }
+      }
+    });
+  }
+
   switchView('college-denied');
 }
 
-function showConcurrentDevicePage(email) {
-  stopHeartbeat();
-  stopAutoRetry();
-  if (concurrentEmailDisplay) {
-    concurrentEmailDisplay.textContent = email || 'Current Account';
-  }
-  if (concurrentAutoRetryNotice) {
-    concurrentAutoRetryNotice.textContent = 'Only 1 device may access assessments at a time. Click "Continue on This Device" to transfer active access here.';
-  }
-  switchView('concurrent-denied');
-}
-
-function showDeviceLimitPage(email) {
-  stopHeartbeat();
-  stopAutoRetry();
-  if (deviceLimitEmailDisplay) {
-    deviceLimitEmailDisplay.textContent = email || 'Current Account';
-  }
-  switchView('device-limit-denied');
-}
-
-// --- SESSION & HEARTBEAT MANAGEMENT ---
-function stopHeartbeat() {
-  if (heartbeatInterval) {
-    clearInterval(heartbeatInterval);
-    heartbeatInterval = null;
-  }
-}
-
-function startHeartbeat(userId) {
-  stopHeartbeat();
-  // Clerk manages the primary session lifecycle.
-  // A gentle 2-minute check ensures superseded devices discover session state gracefully.
-  heartbeatInterval = setInterval(async () => {
-    if (!currentUser || currentUser.id !== userId) {
-      stopHeartbeat();
-      return;
-    }
-    try {
-      const res = await fetch('/api/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'heartbeat',
-          userId,
-          deviceId,
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.allowed) {
-        stopHeartbeat();
-        if (data.error === 'DEVICE_LIMIT_EXCEEDED') {
-          showDeviceLimitPage(currentUser?.primaryEmailAddress?.emailAddress || '', data.allowedDevices || []);
-        } else {
-          showConcurrentDevicePage(currentUser?.primaryEmailAddress?.emailAddress || '');
-        }
-      }
-    } catch {
-      // Gentle background check: ignore transient network hiccups
-    }
-  }, 25000);
-}
-
-function releaseDeviceSession(userId) {
-  if (!userId) return;
-  const payload = JSON.stringify({
-    action: 'release',
-    userId,
-    deviceId,
-  });
-
-  if (navigator.sendBeacon) {
-    const blob = new Blob([payload], { type: 'application/json' });
-    navigator.sendBeacon('/api/session', blob);
-  } else {
-    fetch('/api/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: payload,
-      keepalive: true,
-    }).catch(() => {});
-  }
-}
-
-async function claimDeviceSession(userId, email) {
-  try {
-    const res = await fetch('/api/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'claim',
-        userId,
-        deviceId,
-        email,
-        deviceInfo: navigator.userAgent,
-      })
-    });
-
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data.allowed) {
-      return { allowed: true };
-    }
-
-    if (res.status === 403 && data.error === 'DEVICE_LIMIT_EXCEEDED') {
-      return {
-        allowed: false,
-        error: 'DEVICE_LIMIT_EXCEEDED',
-        message: data.message,
-        allowedDevices: data.allowedDevices || [],
-      };
-    }
-
-    if (res.status === 409 && data.error === 'ACTIVE_SESSION_EXISTS') {
-      return {
-        allowed: false,
-        error: 'ACTIVE_SESSION_EXISTS',
-        message: data.message,
-        secondsRemaining: data.secondsRemaining || 15,
-      };
-    }
-
-    if (res.status === 403 && data.error === 'COLLEGE_EMAIL_REQUIRED') {
-      return {
-        allowed: false,
-        error: 'COLLEGE_EMAIL_REQUIRED',
-        message: data.message,
-      };
-    }
-
-    return {
-      allowed: false,
-      error: 'SERVER_ERROR',
-      message: data.error || data.message || 'Server connection error',
-    };
-  } catch (err) {
-    console.error('Error claiming device session:', err);
-    return {
-      allowed: false,
-      error: 'NETWORK_ERROR',
-      message: 'Network connection error',
-    };
-  }
-}
-
-async function triggerSessionTakeover() {
-  if (!currentUser) return;
-  const email = currentUser.primaryEmailAddress?.emailAddress || '';
-
-  if (concurrentTakeoverBtn) {
-    concurrentTakeoverBtn.disabled = true;
-    concurrentTakeoverBtn.classList.add('opacity-75');
-  }
-
-  try {
-    const res = await fetch('/api/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'takeover',
-        userId: currentUser.id,
-        deviceId,
-        email,
-        deviceInfo: navigator.userAgent,
-      })
-    });
-
-    const data = await res.json();
-    if (res.ok && data.allowed) {
-      stopAutoRetry();
-      switchView('app');
-      clerkInstance.mountUserButton(userButtonMount);
-      populateGameList();
-      startHeartbeat(currentUser.id);
-      await syncUserWithDB(currentUser);
-    } else {
-      console.warn('Takeover error:', data);
-    }
-  } catch (err) {
-    console.error('Error taking over session:', err);
-  } finally {
-    if (concurrentTakeoverBtn) {
-      concurrentTakeoverBtn.disabled = false;
-      concurrentTakeoverBtn.classList.remove('opacity-75');
-    }
-  }
-}
-
-function stopAutoRetry() {
-  if (autoRetryInterval) {
-    clearInterval(autoRetryInterval);
-    autoRetryInterval = null;
-  }
-}
-
-function startAutoRetry(seconds = 15) {
-  stopAutoRetry();
-  autoRetrySecondsLeft = Math.max(1, seconds);
-  if (concurrentAutoRetryNotice) {
-    concurrentAutoRetryNotice.innerHTML = `Active on another device (expires in <span class="text-amber-400 font-mono font-bold">${autoRetrySecondsLeft}s</span>). Click <strong>"Continue on This Device"</strong> to transfer access here now.`;
-  }
-
-  autoRetryInterval = setInterval(async () => {
-    autoRetrySecondsLeft--;
-    if (autoRetrySecondsLeft <= 0) {
-      stopAutoRetry();
-      if (concurrentAutoRetryNotice) {
-        concurrentAutoRetryNotice.textContent = 'Auto-checking availability...';
-      }
-      await triggerSessionRetry();
-    } else {
-      if (concurrentAutoRetryNotice) {
-        concurrentAutoRetryNotice.innerHTML = `Active on another device (expires in <span class="text-amber-400 font-mono font-bold">${autoRetrySecondsLeft}s</span>). Click <strong>"Continue on This Device"</strong> to transfer access here now.`;
-      }
-    }
-  }, 1000);
-}
-
-async function triggerSessionRetry() {
-  if (!currentUser) return;
-  const email = currentUser.primaryEmailAddress?.emailAddress || '';
-
-  if (concurrentRetryBtn) {
-    concurrentRetryBtn.disabled = true;
-    concurrentRetryBtn.classList.add('opacity-75');
-  }
-  if (concurrentRetryText) {
-    concurrentRetryText.textContent = 'Checking availability...';
-  }
-
-  const claim = await claimDeviceSession(currentUser.id, email);
-
-  if (concurrentRetryBtn) {
-    concurrentRetryBtn.disabled = false;
-    concurrentRetryBtn.classList.remove('opacity-75');
-  }
-  if (concurrentRetryText) {
-    concurrentRetryText.textContent = 'Check Availability';
-  }
-
-  if (claim.allowed) {
-    stopAutoRetry();
-    switchView('app');
-    clerkInstance.mountUserButton(userButtonMount, { afterSignOutUrl: '/index.html' });
-    populateGameList();
-    startHeartbeat(currentUser.id);
-    await syncUserWithDB(currentUser);
-  } else if (claim.error === 'DEVICE_LIMIT_EXCEEDED') {
-    stopAutoRetry();
-    showDeviceLimitPage(email, claim.allowedDevices || []);
-  } else {
-    startAutoRetry(claim.secondsRemaining || 15);
-  }
-}
-
-async function triggerDeviceReset() {
-  if (!currentUser) return;
-  const email = currentUser.primaryEmailAddress?.emailAddress || '';
-
-  if (deviceLimitResetBtn) {
-    deviceLimitResetBtn.disabled = true;
-    deviceLimitResetBtn.classList.add('opacity-75');
-  }
-  if (deviceLimitResetLabel) {
-    deviceLimitResetLabel.textContent = 'Authorizing device...';
-  }
-
-  try {
-    const res = await fetch('/api/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'reset-devices',
-        userId: currentUser.id,
-        deviceId,
-        email,
-        deviceInfo: navigator.userAgent,
-      })
-    });
-
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data.allowed) {
-      stopAutoRetry();
-      switchView('app');
-      clerkInstance.mountUserButton(userButtonMount, { afterSignOutUrl: '/index.html' });
-      populateGameList();
-      startHeartbeat(currentUser.id);
-      await syncUserWithDB(currentUser);
-    } else {
-      alert(data.message || 'Unable to authorize this device. Please try again.');
-    }
-  } catch (err) {
-    console.error('Error resetting device:', err);
-    alert('Network communication error while resetting device.');
-  } finally {
-    if (deviceLimitResetBtn) {
-      deviceLimitResetBtn.disabled = false;
-      deviceLimitResetBtn.classList.remove('opacity-75');
-    }
-    if (deviceLimitResetLabel) {
-      deviceLimitResetLabel.textContent = 'Authorize This Device (Reset Slots)';
-    }
-  }
-}
+// --- Simplified Session Helpers (No-ops for removed restrictions) ---
+function stopHeartbeat() {}
+function startHeartbeat() {}
+function releaseDeviceSession() {}
+async function claimDeviceSession() { return { allowed: true }; }
+function showConcurrentDevicePage() {}
+function showDeviceLimitPage() {}
+function stopAutoRetry() {}
+function startAutoRetry() {}
+async function triggerSessionTakeover() {}
+async function triggerSessionRetry() {}
+async function triggerDeviceReset() {}
 
 // Sync latest balances and device authorization state when window/tab gains focus
 window.addEventListener('focus', async () => {
@@ -731,10 +675,10 @@ function refreshPreviewScreen(game) {
   if (previewGameChancesBadge) {
     if (totalLeft > 0) {
       previewGameChancesBadge.className = 'badge badge--emerald';
-      previewGameChancesBadge.textContent = `${totalLeft} Play${totalLeft > 1 ? 's' : ''} Available`;
+      previewGameChancesBadge.textContent = `${totalLeft} Chance${totalLeft > 1 ? 's' : ''} Available`;
     } else {
       previewGameChancesBadge.className = 'badge badge--rose';
-      previewGameChancesBadge.textContent = '0 Plays — Recharge Needed';
+      previewGameChancesBadge.textContent = '0 Chances — Recharge Needed';
     }
   }
 }
@@ -752,13 +696,13 @@ function updateUI() {
     balanceBreakdownSubtext.textContent = `Summed across all ${gameCount} assessments`;
   }
   if (buyChancesPackLabel) {
-    buyChancesPackLabel.textContent = `+${packSize} Plays`;
+    buyChancesPackLabel.textContent = `+${packSize} Chances`;
   }
   if (buyChancesPriceTag) {
     buyChancesPriceTag.textContent = `₹${packPrice}`;
   }
   if (modalPackName) {
-    modalPackName.textContent = `${packSize} Plays Power Pack`;
+    modalPackName.textContent = `${packSize} Chances Power Pack`;
   }
   if (modalPackAttempts) {
     modalPackAttempts.textContent = `${packSize} extra attempts`;
@@ -774,17 +718,17 @@ function updateUI() {
       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
       </svg>
-      +${packSize} Plays for all ${gameCount} assessments
+      +${packSize} Chances for all ${gameCount} assessments
     `;
   }
   if (welcomePriceValue) {
     welcomePriceValue.textContent = `₹${packPrice}`;
   }
   if (welcomePriceUnit) {
-    welcomePriceUnit.textContent = `/ ${packSize} Plays`;
+    welcomePriceUnit.textContent = `/ ${packSize} Chances`;
   }
   if (welcomeBuyPackLabel) {
-    welcomeBuyPackLabel.textContent = `Get ${packSize} Plays Pack`;
+    welcomeBuyPackLabel.textContent = `Get ${packSize} Chances Pack`;
   }
 
   // Update badges on all game cards
@@ -805,17 +749,17 @@ function updateUI() {
       if (totalLeft > 0) {
         if (freeLeft > 0) {
           badge.className = 'game-chance-badge badge badge--emerald';
-          badge.textContent = `${totalLeft} Play${totalLeft > 1 ? 's' : ''} Left`;
+          badge.textContent = `${totalLeft} Chance${totalLeft > 1 ? 's' : ''} Left`;
         } else {
           badge.className = 'game-chance-badge badge badge--cyan';
-          badge.textContent = `${totalLeft} Play${totalLeft > 1 ? 's' : ''} Left`;
+          badge.textContent = `${totalLeft} Chance${totalLeft > 1 ? 's' : ''} Left`;
         }
       } else {
         badge.className = 'game-chance-badge badge';
         badge.style.background = 'rgba(255,255,255,0.04)';
         badge.style.color = 'rgba(255,255,255,0.28)';
         badge.style.borderColor = 'rgba(255,255,255,0.06)';
-        badge.textContent = '0 Plays Left';
+        badge.textContent = '0 Chances Left';
       }
     }
   });
@@ -827,7 +771,7 @@ function updateUI() {
 
 function openPaymentModal(noticeMessage = '') {
   if (modalNoticeText) {
-    modalNoticeText.textContent = noticeMessage || `You have exhausted your available plays. Recharge with ${readPositiveConfigNumber(userState.config?.paidChancesPack, 0)} extra plays to continue training!`;
+    modalNoticeText.textContent = noticeMessage || `You have exhausted your available chances. Recharge with ${readPositiveConfigNumber(userState.config?.paidChancesPack, 0)} extra chances to continue training!`;
   }
   if (paymentStatusMsg) {
     paymentStatusMsg.textContent = '';
@@ -1132,10 +1076,7 @@ async function startApp() {
 
     // Event Listeners for Restriction Screens
     if (emailDeniedSignOutBtn) {
-      emailDeniedSignOutBtn.addEventListener('click', async () => {
-        if (currentUser) releaseDeviceSession(currentUser.id);
-        await clerk.signOut({ redirectUrl: window.location.origin + '/index.html' });
-      });
+      emailDeniedSignOutBtn.addEventListener('click', handleReturnToSignIn);
     }
 
     if (concurrentTakeoverBtn) {
@@ -1192,7 +1133,7 @@ async function startApp() {
       });
     }
 
-    // Consent Screen: Start Game Button (only deducts play upon explicit user click)
+    // Consent Screen: Start Game Button (only verifies available balance; deduction happens inside the game on first move/action)
     if (startGameBtn) {
       startGameBtn.addEventListener('click', async () => {
         if (!activePreviewGame || !currentUser) return;
@@ -1214,16 +1155,8 @@ async function startApp() {
         startGameBtn.classList.add('opacity-75');
 
         try {
-          const clearance = await requestPlayGame(activePreviewGame.id);
-
-          if (!clearance.allowed) {
-            if (clearance.message) {
-              openPaymentModal(clearance.message);
-            }
-            return;
-          }
-
-          // Clearance granted!
+          // Launch game directly without pre-deduction.
+          // 1 play will be deducted when the user makes their first active move/rotation inside the game!
           if (activePreviewGame.id === 'tile-maze') {
             // Open in a new window as requested
             if (gamePreviewScreen) {
@@ -1360,9 +1293,12 @@ async function startApp() {
             }
             // Inform child game of current session info
             try {
+              const gamePlays = calculateGameChances(userState, activePreviewGame.id);
               gameFrame.contentWindow?.postMessage({
                 type: 'GAME_SESSION_INFO',
                 gameId: activePreviewGame.id,
+                gameChances: gamePlays,
+                remainingChances: gamePlays,
                 totalChances: calculateTotalChances(userState)
               }, '*');
             } catch (e) {}
@@ -1383,20 +1319,25 @@ async function startApp() {
 
             if (event.data.type === 'GET_GAME_SESSION_INFO') {
               try {
+                const targetGameId = event.data.gameId || activePreviewGame?.id;
+                const gamePlays = targetGameId ? calculateGameChances(userState, targetGameId) : calculateTotalChances(userState);
                 event.source?.postMessage({
                   type: 'GAME_SESSION_INFO',
-                  gameId: activePreviewGame?.id,
+                  gameId: targetGameId,
+                  gameChances: gamePlays,
+                  remainingChances: gamePlays,
                   totalChances: calculateTotalChances(userState)
                 }, '*');
               } catch (e) {}
               return;
             }
 
-          if (event.data.type === 'REQUEST_NEW_GAME') {
+          if (event.data.type === 'REQUEST_NEW_GAME' || event.data.type === 'REQUEST_PLAY_ACTION') {
+            const reqType = event.data.type;
             const targetGameId = event.data.gameId || activePreviewGame?.id;
             if (!targetGameId || !currentUser) {
               event.source?.postMessage({
-                type: 'NEW_GAME_AUTHORIZED',
+                type: reqType === 'REQUEST_PLAY_ACTION' ? 'PLAY_ACTION_AUTHORIZED' : 'NEW_GAME_AUTHORIZED',
                 allowed: true,
                 standalone: true
               }, '*');
@@ -1413,11 +1354,11 @@ async function startApp() {
 
             if (freeLeft <= 0 && paidLeft <= 0) {
               const targetGame = games.find(g => g.id === targetGameId) || activePreviewGame;
-              openPaymentModal(`You have exhausted your available plays for "${targetGame?.title || 'this game'}". Recharge to start a new game!`);
+              openPaymentModal(`You have exhausted your available chances for "${targetGame?.title || 'this game'}". Recharge to start a new game!`);
               event.source?.postMessage({
-                type: 'NEW_GAME_DENIED',
+                type: reqType === 'REQUEST_PLAY_ACTION' ? 'PLAY_ACTION_DENIED' : 'NEW_GAME_DENIED',
                 reason: 'NO_CHANCES',
-                message: 'No plays available. Please recharge!'
+                message: 'No chances available. Please recharge!'
               }, '*');
               return;
             }
@@ -1425,17 +1366,21 @@ async function startApp() {
             // Deduct chance via backend
             const clearance = await requestPlayGame(targetGameId);
             if (clearance.allowed) {
+              const gamePlays = calculateGameChances(userState, targetGameId);
               event.source?.postMessage({
-                type: 'NEW_GAME_AUTHORIZED',
+                type: reqType === 'REQUEST_PLAY_ACTION' ? 'PLAY_ACTION_AUTHORIZED' : 'NEW_GAME_AUTHORIZED',
                 allowed: true,
-                remainingChances: calculateTotalChances(userState)
+                gameId: targetGameId,
+                gameChances: gamePlays,
+                remainingChances: gamePlays,
+                totalChances: calculateTotalChances(userState)
               }, '*');
             } else {
               if (clearance.message) {
                 openPaymentModal(clearance.message);
               }
               event.source?.postMessage({
-                type: 'NEW_GAME_DENIED',
+                type: reqType === 'REQUEST_PLAY_ACTION' ? 'PLAY_ACTION_DENIED' : 'NEW_GAME_DENIED',
                 reason: 'CLEARANCE_FAILED',
                 message: clearance.message || 'Unable to deduct chance.'
               }, '*');
@@ -1494,6 +1439,96 @@ async function startApp() {
 
     // Authentication Logic
     let isSignInMounted = false;
+    let lastDisallowedMessage = null;
+
+    function showPreAuthError(title, msg) {
+        lastDisallowedMessage = { title, msg };
+        const errorBox = document.getElementById('clerk-preauth-error');
+        const errorTitle = document.getElementById('clerk-preauth-error-title');
+        const errorText = document.getElementById('clerk-preauth-error-text');
+        if (errorBox) {
+            if (errorTitle) errorTitle.textContent = title || 'Personal Email Not Allowed';
+            if (errorText) errorText.textContent = msg;
+            errorBox.classList.remove('hidden');
+            errorBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    function clearPreAuthError() {
+        lastDisallowedMessage = null;
+        const errorBox = document.getElementById('clerk-preauth-error');
+        if (errorBox) {
+            errorBox.classList.add('hidden');
+        }
+    }
+
+    function initClerkPreAuthInterceptor() {
+        if (!clerkMountPoint || clerkMountPoint.dataset.interceptorAttached) return;
+        clerkMountPoint.dataset.interceptorAttached = 'true';
+
+        function getEnteredEmail() {
+            if (!clerkMountPoint) return '';
+            const inputs = clerkMountPoint.querySelectorAll('input');
+            for (const input of inputs) {
+                const type = (input.type || '').toLowerCase();
+                const name = (input.name || '').toLowerCase();
+                if (type === 'password' || type === 'checkbox' || type === 'radio' || type === 'hidden') continue;
+                const val = (input.value || '').trim();
+                if (val && (val.includes('@') || type === 'email' || name.includes('identifier') || name.includes('email'))) {
+                    return val;
+                }
+            }
+            return '';
+        }
+
+        function handleCheck(e) {
+            if (e.type === 'keydown' && e.key !== 'Enter') return;
+            if (e.type === 'click') {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                const btnType = (btn.type || '').toLowerCase();
+                const btnClass = (btn.className || '').toLowerCase();
+                const btnText = (btn.textContent || '').toLowerCase();
+                const isSubmit = btnType === 'submit' || btnClass.includes('primary') || btnText.includes('continue') || btnText.includes('sign in') || btnText.includes('sign up');
+                if (!isSubmit) return;
+            }
+
+            const email = getEnteredEmail();
+            if (!email || !email.includes('@')) return;
+
+            // 1. If not an educational email (personal consumer email like Gmail, Yahoo, Outlook, etc.)
+            if (!isEducationEmail(email)) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                showPreAuthError(
+                    'Personal Email Not Allowed',
+                    'Personal email addresses (e.g. Gmail, Yahoo, Outlook) are not permitted. Please use your official college or university email ID.'
+                );
+                return;
+            }
+
+            // 2. If it is an educational email, but not in our allowed campus list
+            if (!isCollegeEmail(email)) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                clearPreAuthError();
+                showCollegeDeniedPage(email);
+                return;
+            }
+
+            // 3. Approved college email
+            clearPreAuthError();
+        }
+
+        clerkMountPoint.addEventListener('keydown', handleCheck, true);
+        clerkMountPoint.addEventListener('submit', handleCheck, true);
+        clerkMountPoint.addEventListener('click', handleCheck, true);
+        clerkMountPoint.addEventListener('input', () => {
+            clearPreAuthError();
+        }, true);
+    }
 
     function renderSignIn() {
         if (!clerk.user) {
@@ -1542,6 +1577,10 @@ async function startApp() {
                     },
                 });
                 isSignInMounted = true;
+                initClerkPreAuthInterceptor();
+            }
+            if (lastDisallowedMessage) {
+                showPreAuthError(lastDisallowedMessage.title, lastDisallowedMessage.msg);
             }
         }
     }
@@ -1566,44 +1605,35 @@ async function startApp() {
 
       const userEmail = user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress || '';
 
-      // 1. Enforce College Email Policy
+      // 1. Enforce Educational Email Only Policy (Reject Personal Emails e.g. Gmail, Yahoo, Outlook)
+      if (!isEducationEmail(userEmail)) {
+        console.warn(`[Auth Policy] Disallowed personal email: ${userEmail}`);
+        try {
+          await clerk.signOut();
+        } catch (e) {
+          console.error('Error signing out disallowed email:', e);
+        }
+        currentUser = null;
+        switchView('sign-in');
+        renderSignIn();
+        showPreAuthError(
+          'Personal Email Not Allowed',
+          `The Google account (${userEmail || 'Personal'}) is a personal email. Personal email IDs (e.g. @gmail.com) are strictly not permitted. Please sign in with your official college or university email address.`
+        );
+        return;
+      }
+
+      // 2. Educational Email, but Campus Not Yet Enrolled / Allowed
       if (!isCollegeEmail(userEmail)) {
         showCollegeDeniedPage(userEmail);
         return;
       }
 
-      // 2. Enforce Device Limit (Max 2 Devices) & Single-Device Active Concurrency
-      const claimResult = await claimDeviceSession(user.id, userEmail);
-      if (!claimResult.allowed) {
-        if (claimResult.error === 'DEVICE_LIMIT_EXCEEDED') {
-          showDeviceLimitPage(userEmail, claimResult.allowedDevices || []);
-          return;
-        }
-        if (claimResult.error === 'ACTIVE_SESSION_EXISTS') {
-          showConcurrentDevicePage(userEmail, claimResult.secondsRemaining);
-          return;
-        }
-        if (claimResult.error === 'COLLEGE_EMAIL_REQUIRED') {
-          showCollegeDeniedPage(userEmail);
-          return;
-        }
-
-        // If it's a temporary server/DB error, retry after 2 seconds
-        console.warn('Temporary server/DB connection delay:', claimResult.message);
-        setTimeout(async () => {
-          if (currentUser) {
-            await handleAuthState(currentUser);
-          }
-        }, 2000);
-        return;
-      }
-
-      // 3. User is authorized, device slot confirmed, and active session claimed!
-      stopAutoRetry();
+      // 3. Direct Authorized Access (no device limits, no concurrency lock, no heartbeat)
+      currentUser = user;
       switchView('app');
       clerk.mountUserButton(userButtonMount, { afterSignOutUrl: '/index.html' });
       populateGameList();
-      startHeartbeat(user.id);
       await syncUserWithDB(user);
     }
 

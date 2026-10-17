@@ -65,49 +65,11 @@ export default async function handler(req, res) {
       });
     }
 
-    const MAX_ALLOWED_DEVICES = Number(process.env.MAX_ALLOWED_DEVICES || 2);
-
-    // Check device limit and concurrency
-    const now = Date.now();
-    if (user && deviceId) {
-      if (!user.allowedDevices) {
-        user.allowedDevices = [];
-      }
-
-      const isKnownDevice = user.allowedDevices.some(d => d.deviceId === deviceId);
-      if (!isKnownDevice) {
-        if (user.allowedDevices.length >= MAX_ALLOWED_DEVICES) {
-          return res.status(403).json({
-            error: 'DEVICE_LIMIT_EXCEEDED',
-            message: `Device limit reached: This account is already registered to ${MAX_ALLOWED_DEVICES} devices. Access from new devices is blocked.`,
-            allowedDevices: user.allowedDevices,
-          });
-        }
-        user.allowedDevices.push({
-          deviceId,
-          registeredAt: new Date(),
-          lastUsedAt: new Date(),
-        });
-      } else {
-        const d = user.allowedDevices.find(dev => dev.deviceId === deviceId);
-        if (d) d.lastUsedAt = new Date();
-      }
-
-      const isSessionExpired = !user.activeSessionLastSeen ||
-        (now - new Date(user.activeSessionLastSeen).getTime() > SESSION_TIMEOUT_MS);
-
-      if (user.activeSessionId && user.activeSessionId !== deviceId && !isSessionExpired) {
-        return res.status(409).json({
-          allowed: false,
-          error: 'ACTIVE_SESSION_EXISTS',
-          message: 'This account is currently active on another device. Simultaneous logins are not allowed.',
-          lastActive: user.activeSessionLastSeen,
-        });
-      }
-
-      // Claim/refresh this session
-      user.activeSessionId = deviceId;
-      user.activeSessionLastSeen = new Date();
+    if (user && email && user.email !== email) {
+      user.email = email;
+    }
+    if (user && name && !user.name) {
+      user.name = name;
     }
 
     const defaultFree = getFreeChancesPerGame();

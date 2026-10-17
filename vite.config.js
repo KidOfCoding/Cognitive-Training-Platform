@@ -60,6 +60,7 @@ export default defineConfig({
               'create-order': './api/create-order.js',
               'verify-payment': './api/verify-payment.js',
               'session': './api/session.js',
+              'request-college': './api/request-college.js',
             };
 
             if (moduleMap[routeName]) {

@@ -890,15 +890,16 @@ aside {
 }
 
 /* Balance card */
+/* Balance card */
 #balance-card {
   margin: 0 1.125rem 1.125rem;
-  padding: 1rem 1.15rem;
+  padding: 1.1rem 1.15rem;
   background: linear-gradient(145deg, rgba(8, 20, 38, 0.95) 0%, rgba(10, 16, 28, 0.98) 100%);
-  border: 1px solid rgba(34, 211, 238, 0.24);
+  border: 1px solid rgba(34, 211, 238, 0.22);
   border-radius: 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   position: relative;
   overflow: hidden;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45), 0 0 25px rgba(34, 211, 238, 0.08);
@@ -918,39 +919,33 @@ aside {
   background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.7), rgba(168, 85, 247, 0.5), transparent);
 }
 
-.balance-card-header {
+/* Card Top Row: Icon + Label and Active Status Chip */
+.balance-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
-.balance-icon-and-text {
+.balance-title-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
-  flex: 1;
 }
 
 .balance-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.18), rgba(59, 130, 246, 0.12));
-  border: 1px solid rgba(34, 211, 238, 0.32);
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(59, 130, 246, 0.12));
+  border: 1px solid rgba(34, 211, 238, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--accent-cyan-400);
-  box-shadow: 0 0 16px rgba(34, 211, 238, 0.2);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.2);
   flex-shrink: 0;
-}
-
-.balance-meta {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
 }
 
 .balance-label {
@@ -963,26 +958,49 @@ aside {
   white-space: nowrap;
 }
 
+.balance-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.22);
+  font-size: 0.64rem;
+  font-weight: 600;
+  color: #34d399;
+  letter-spacing: 0.02em;
+}
+
+.balance-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-emerald-400);
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.9);
+  flex-shrink: 0;
+}
+
+/* Number Readout Row */
 .balance-digits-row {
   display: flex;
   align-items: baseline;
-  gap: 4px;
-  line-height: 1.2;
-  margin-top: 1px;
+  gap: 8px;
+  line-height: 1;
 }
 
 #paid-chances-count {
   font-family: var(--font-mono);
-  font-size: 1.55rem;
+  font-size: 1.95rem;
   font-weight: 800;
   color: #38bdf8;
   letter-spacing: -0.02em;
   line-height: 1;
-  text-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+  text-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
 }
 
 .balance-unit {
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: #94a3b8;
   text-transform: uppercase;
@@ -990,23 +1008,24 @@ aside {
   white-space: nowrap;
 }
 
+/* Full-width Recharge Button */
 #buy-chances-btn {
-  flex-shrink: 0;
-  padding: 6px 11px;
+  width: 100%;
+  padding: 8px 12px;
   background: linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%);
   border: 1px solid rgba(56, 189, 248, 0.45);
   border-radius: 12px;
   color: #ffffff;
   font-family: var(--font-display);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
   transition: var(--transition-smooth);
-  white-space: nowrap;
   box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 #buy-chances-btn:hover {
@@ -1017,77 +1036,48 @@ aside {
 }
 
 #buy-chances-btn:active {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.99);
+}
+
+.btn-pack-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .btn-price-tag {
   background: rgba(0, 0, 0, 0.35);
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: 6px;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 800;
   color: #7dd3fc;
-  border: 1px solid rgba(125, 211, 252, 0.2);
-}
-
-@media (max-width: 310px) {
-  .balance-card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  #buy-chances-btn {
-    width: 100%;
-    justify-content: center;
-  }
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 .balance-card-footer {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-top: 8px;
+  gap: 6px;
+  padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.balance-status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent-emerald-400);
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
-  flex-shrink: 0;
-}
-
 #balance-breakdown-subtext {
-  font-size: 0.72rem;
-  color: #94a3b8;
+  font-size: 0.7rem;
+  color: #64748b;
   font-weight: 500;
   white-space: normal;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 @media (max-width: 767px) {
   #balance-card {
     margin: 0 0.75rem 1rem;
-    padding: 0.85rem 1rem;
-  }
-
-  .balance-card-header {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-
-  .balance-icon-and-text {
-    min-width: 0;
-  }
-
-  #buy-chances-btn {
-    padding: 6px 10px;
-    font-size: 0.72rem;
+    padding: 0.9rem 1rem;
   }
 }
 
