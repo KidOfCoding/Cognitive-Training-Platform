@@ -68,33 +68,38 @@ export default async function handler(req, res) {
       return { ...container };
     };
 
-    const getVal = (container, key) => {
-      if (!container) return 0;
-      if (typeof container.get === 'function') return Number(container.get(key)) || 0;
-      return Number(container[key]) || 0;
-    };
+    const gameIds = ['path-finder', 'bubble-sort', 'tile-maze'];
 
-    const setVal = (container, key, val) => {
-      if (typeof container.set === 'function') {
-        container.set(key, val);
-      } else {
-        container[key] = val;
+    // Normalize freeChances and paidChances if stored as primitives or plain objects
+    if (!user.freeChances || typeof user.freeChances.get !== 'function') {
+      const defaultFree = typeof user.freeChances === 'number' ? user.freeChances : 1;
+      const initialMap = new Map();
+      for (const gid of gameIds) {
+        initialMap.set(gid, (user.freeChances && user.freeChances[gid] !== undefined) ? Number(user.freeChances[gid]) : defaultFree);
       }
-    };
+      user.freeChances = initialMap;
+    }
 
-    const freeCount = getVal(user.freeChances, gameId);
-    const paidCount = getVal(user.paidChances, gameId);
+    if (!user.paidChances || typeof user.paidChances.get !== 'function') {
+      const defaultPaid = typeof user.paidChances === 'number' ? user.paidChances : 0;
+      const initialMap = new Map();
+      for (const gid of gameIds) {
+        initialMap.set(gid, (user.paidChances && user.paidChances[gid] !== undefined) ? Number(user.paidChances[gid]) : defaultPaid);
+      }
+      user.paidChances = initialMap;
+    }
+
+    const freeCount = Number(user.freeChances.get(gameId)) || 0;
+    const paidCount = Number(user.paidChances.get(gameId)) || 0;
 
     let usedType = null;
 
     if (freeCount > 0) {
-      if (!user.freeChances) user.freeChances = new Map();
-      setVal(user.freeChances, gameId, freeCount - 1);
+      user.freeChances.set(gameId, freeCount - 1);
       user.markModified('freeChances');
       usedType = 'free';
     } else if (paidCount > 0) {
-      if (!user.paidChances) user.paidChances = new Map();
-      setVal(user.paidChances, gameId, paidCount - 1);
+      user.paidChances.set(gameId, paidCount - 1);
       user.markModified('paidChances');
       usedType = 'paid';
     } else {

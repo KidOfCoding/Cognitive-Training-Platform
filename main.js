@@ -1629,12 +1629,111 @@ async function startApp() {
         return;
       }
 
-      // 3. Direct Authorized Access (no device limits, no concurrency lock, no heartbeat)
+      // 3. Direct Authorized Access
       currentUser = user;
       switchView('app');
-      clerk.mountUserButton(userButtonMount, { afterSignOutUrl: '/index.html' });
+      
+      clerk.mountUserButton(userButtonMount, {
+        afterSignOutUrl: '/index.html',
+        appearance: {
+          variables: {
+            colorPrimary: '#06b6d4',
+            colorBackground: '#0b1329',
+            colorText: '#f8fafc',
+            colorTextSecondary: '#94a3b8',
+            colorInputBackground: '#0f172a',
+            colorInputText: '#f8fafc',
+            borderRadius: '0.875rem',
+          },
+          elements: {
+            userButtonPopoverCard: {
+              backgroundColor: '#0a101f',
+              border: '1px solid rgba(56, 189, 248, 0.25)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85)',
+              color: '#f8fafc',
+            },
+            userButtonPopoverActionButton: {
+              color: '#cbd5e1',
+            },
+            userPreviewMainIdentifier: {
+              color: '#f8fafc',
+              fontWeight: '600',
+            },
+            userPreviewSecondaryIdentifier: {
+              color: '#94a3b8',
+            }
+          }
+        }
+      });
+
+      // Inject custom Refund Policy & Grievance action inside Clerk User Profile Popover
+      setupClerkPopoverInjector();
+
       populateGameList();
       await syncUserWithDB(user);
+    }
+
+    // Function to inject custom section into Clerk's profile popup
+    function setupClerkPopoverInjector() {
+      if (window.__clerkPopoverObserverAttached) return;
+      window.__clerkPopoverObserverAttached = true;
+
+      const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          for (const node of mutation.addedNodes) {
+            if (node.nodeType === 1) {
+              const popoverActions = node.querySelector ? (node.querySelector('.cl-userButtonPopoverActions') || node.querySelector('[role="menu"]') || node.closest?.('.cl-userButtonPopoverCard')?.querySelector('.cl-userButtonPopoverActions')) : null;
+              if (popoverActions && !popoverActions.querySelector('#clerk-custom-grievance-item')) {
+                const item = document.createElement('button');
+                item.id = 'clerk-custom-grievance-item';
+                item.type = 'button';
+                item.className = 'cl-userButtonPopoverActionButton';
+                item.setAttribute('role', 'menuitem');
+                item.style.cssText = 'display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 12px; background: transparent; border: none; border-radius: 8px; color: #cbd5e1; font-weight: 500; font-size: 13px; cursor: pointer; text-align: left; transition: all 0.15s ease;';
+                item.innerHTML = `
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span>Refund Policy &amp; Grievances</span>
+                `;
+                item.addEventListener('mouseenter', () => {
+                  item.style.backgroundColor = 'rgba(56, 189, 248, 0.1)';
+                  item.style.color = '#38bdf8';
+                });
+                item.addEventListener('mouseleave', () => {
+                  item.style.backgroundColor = 'transparent';
+                  item.style.color = '#cbd5e1';
+                });
+                item.addEventListener('click', (ev) => {
+                  ev.preventDefault();
+                  ev.stopPropagation();
+                  const email = currentUser?.primaryEmailAddress?.emailAddress || '';
+                  if (typeof window.openGrievanceModal === 'function') {
+                    window.openGrievanceModal('refund_irrelevant', email);
+                  }
+                  // Close the clerk popover if open
+                  const popoverCard = document.querySelector('.cl-userButtonPopoverCard');
+                  if (popoverCard) {
+                    popoverCard.style.display = 'none';
+                  }
+                });
+                popoverActions.insertBefore(item, popoverActions.firstChild);
+              }
+            }
+          }
+        }
+      });
+
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      // Also wire up sidebar grievance button
+      const sidebarGrievanceBtn = document.getElementById('sidebar-grievance-btn');
+      if (sidebarGrievanceBtn) {
+        sidebarGrievanceBtn.addEventListener('click', () => {
+          const email = currentUser?.primaryEmailAddress?.emailAddress || '';
+          if (typeof window.openGrievanceModal === 'function') {
+            window.openGrievanceModal('refund_irrelevant', email);
+          }
+        });
+      }
     }
 
     clerk.addListener(async ({ user }) => {
@@ -1651,3 +1750,4 @@ async function startApp() {
 
 // --- Start the application ---
 startApp();
+

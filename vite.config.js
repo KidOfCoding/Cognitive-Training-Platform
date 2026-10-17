@@ -61,6 +61,8 @@ export default defineConfig({
               'verify-payment': './api/verify-payment.js',
               'session': './api/session.js',
               'request-college': './api/request-college.js',
+              'admin': './api/admin.js',
+              'grievance': './api/grievance.js',
             };
 
             if (moduleMap[routeName]) {

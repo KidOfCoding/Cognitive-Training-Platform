@@ -890,10 +890,9 @@ aside {
 }
 
 /* Balance card */
-/* Balance card */
 #balance-card {
   margin: 0 1.125rem 1.125rem;
-  padding: 1.1rem 1.15rem;
+  padding: 1.1rem 1.15rem 1.2rem;
   background: linear-gradient(145deg, rgba(8, 20, 38, 0.95) 0%, rgba(10, 16, 28, 0.98) 100%);
   border: 1px solid rgba(34, 211, 238, 0.22);
   border-radius: 18px;
@@ -901,7 +900,6 @@ aside {
   flex-direction: column;
   gap: 12px;
   position: relative;
-  overflow: hidden;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45), 0 0 25px rgba(34, 211, 238, 0.08);
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
@@ -914,8 +912,10 @@ aside {
 #balance-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
+  top: 0; left: 16px; right: 16px;
   height: 2px;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
   background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.7), rgba(168, 85, 247, 0.5), transparent);
 }
 
@@ -1026,6 +1026,8 @@ aside {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 #buy-chances-btn:hover {
@@ -1972,4 +1974,82 @@ main {
 ::selection {
   background: rgba(34, 211, 238, 0.25);
   color: #fff;
-}
+}
+
+/* ============================================================
+   CLERK USER PROFILE POPOVER DARK THEME OVERRIDES
+   ============================================================ */
+
+.cl-userButtonPopoverCard {
+  background: #090f1e !important;
+  border: 1px solid rgba(56, 189, 248, 0.22) !important;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.75) !important;
+  color: #f1f5f9 !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+.cl-userPreview {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  padding: 12px 14px !important;
+}
+
+.cl-userButtonPopoverActions {
+  padding: 8px 10px !important;
+}
+
+.cl-userButtonPopoverActionButton,
+.cl-userButtonPopoverCustomItem {
+  color: #cbd5e1 !important;
+  border-radius: 8px !important;
+  transition: all 0.15s ease !important;
+  padding: 8px 12px !important;
+}
+
+.cl-userButtonPopoverActionButton:hover,
+.cl-userButtonPopoverCustomItem:hover {
+  background-color: rgba(56, 189, 248, 0.08) !important;
+  color: #38bdf8 !important;
+}
+
+.cl-userButtonPopoverActionButtonText {
+  color: #cbd5e1 !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+}
+
+.cl-userButtonPopoverActionButton:hover .cl-userButtonPopoverActionButtonText {
+  color: #38bdf8 !important;
+}
+
+.cl-userButtonPopoverActionButtonIcon,
+.cl-userButtonPopoverActionButton svg {
+  color: #94a3b8 !important;
+}
+
+.cl-userButtonPopoverActionButton:hover .cl-userButtonPopoverActionButtonIcon,
+.cl-userButtonPopoverActionButton:hover svg {
+  color: #38bdf8 !important;
+}
+
+.cl-userButtonPopoverFooter {
+  background: #060a14 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+  padding: 8px 12px !important;
+}
+
+.cl-userPreviewMainIdentifier {
+  color: #f8fafc !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+}
+
+.cl-userPreviewSecondaryIdentifier {
+  color: #94a3b8 !important;
+  font-size: 12px !important;
+}
+
+.cl-userButtonAvatarBox {
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+}
+

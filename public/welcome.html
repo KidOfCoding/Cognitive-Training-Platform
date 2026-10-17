@@ -906,7 +906,7 @@
         </p>
       </div>
       <div>
-        <a class="btn btn-primary" href="/index.html"><i data-lucide="hand-coins"></i> Refund Policy</a>
+        <button type="button" class="btn btn-primary" onclick="if(window.openGrievanceModal) window.openGrievanceModal('refund_irrelevant'); else window.location.href='/index.html';"><i data-lucide="hand-coins"></i> Refund Policy &amp; Grievance</button>
       </div>
     </section>
 
@@ -924,11 +924,95 @@
       </p>
     </section>
 
-    <footer>
-      © <span id="year"></span> Cognitive Training Platform · All rights reserved.
+    <!-- Comprehensive Platform Footer with Contact Details & Grievance Policy -->
+    <footer style="margin-top: 48px; padding: 48px 24px 32px; border-top: 1px solid rgba(56, 189, 248, 0.15); background: rgba(10, 16, 32, 0.7); border-radius: 24px; text-align: left;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 32px; margin-bottom: 36px;">
+        <!-- Col 1: Contact & Founder -->
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #06b6d4, #3b82f6); display: flex; align-items: center; justify-content: center; font-size: 16px;">
+              ⚡
+            </div>
+            <span style="font-weight: 800; color: #ffffff; font-size: 1rem;">Cognitive Training</span>
+          </div>
+          <p style="font-size: 0.82rem; color: #94a3b8; line-height: 1.5; margin: 0 0 14px;">
+            Dedicated placement assessment simulation platform for institutional engineering &amp; technology students.
+          </p>
+          <div style="padding: 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
+            <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Direct Contact &amp; Queries</div>
+            <div style="font-weight: 700; color: #f1f5f9; font-size: 0.88rem; margin: 2px 0;">Debasish Dash</div>
+            <a href="mailto:debawork859696@gmail.com" style="display: inline-flex; align-items: center; gap: 5px; color: #38bdf8; text-decoration: none; font-size: 0.82rem; font-weight: 600; word-break: break-all;">
+              <i data-lucide="mail" style="width: 14px; height: 14px;"></i> debawork859696@gmail.com
+            </a>
+          </div>
+        </div>
+
+        <!-- Col 2: Refund Policy & Fair Use -->
+        <div>
+          <h4 style="font-size: 0.85rem; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 14px;">
+            ⚖️ Refund Policy &amp; Grievances
+          </h4>
+          <p style="font-size: 0.8rem; color: #94a3b8; line-height: 1.5; margin: 0 0 12px;">
+            If you believe the games provided are irrelevant or not applicable to your placement test syllabus and money got wasted, you may submit your claim with photo proof for verification.
+          </p>
+          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 0.82rem;">
+            <li>
+              <button type="button" onclick="if(window.openGrievanceModal) window.openGrievanceModal('refund_irrelevant');" style="background: none; border: none; padding: 0; color: #38bdf8; cursor: pointer; text-decoration: underline; font-size: 0.82rem; font-weight: 600;">
+                → Submit Irrelevant Games / Refund Claim
+              </button>
+            </li>
+            <li>
+              <button type="button" onclick="if(window.openGrievanceModal) window.openGrievanceModal('bug_issue');" style="background: none; border: none; padding: 0; color: #94a3b8; hover: color: #f1f5f9; cursor: pointer; font-size: 0.82rem;">
+                → Report Web App Issue / Glitch (with Photo)
+              </button>
+            </li>
+            <li>
+              <button type="button" onclick="if(window.openGrievanceModal) window.openGrievanceModal('suggestion');" style="background: none; border: none; padding: 0; color: #94a3b8; hover: color: #f1f5f9; cursor: pointer; font-size: 0.82rem;">
+                → Suggest New Game / Feature Request
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Col 3: Campus & Admin Access -->
+        <div>
+          <h4 style="font-size: 0.85rem; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 14px;">
+            🏫 Campus &amp; Administration
+          </h4>
+          <p style="font-size: 0.8rem; color: #94a3b8; line-height: 1.5; margin: 0 0 12px;">
+            Access is currently restricted to accredited engineering colleges and universities in India.
+          </p>
+          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 0.82rem;">
+            <li>
+              <a href="/index.html" style="color: #38bdf8; text-decoration: none; font-weight: 600;">
+                → Request Your College Addition
+              </a>
+            </li>
+            <li>
+              <a href="/index.html" style="color: #94a3b8; text-decoration: none;">
+                → Launch Assessment Dashboard
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Copyright & Bottom Line -->
+      <div style="padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.06); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: 0.78rem; color: #64748b;">
+        <div>
+          © <span id="year"></span> Cognitive Training Platform · Founded by Debasish Dash (<a href="mailto:debawork859696@gmail.com" style="color: #94a3b8; text-decoration: none;">debawork859696@gmail.com</a>)
+        </div>
+        <div style="display: flex; gap: 16px;">
+          <span>Strict Educational Policy</span>
+          <span>·</span>
+          <span>Fair Photo-Proof Review</span>
+        </div>
+      </div>
     </footer>
   </main>
 
+  <!-- Grievance & Refund Modal Engine -->
+  <script src="/shared/grievance_modal.js"></script>
   <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
   <script>
     if (window.lucide) {

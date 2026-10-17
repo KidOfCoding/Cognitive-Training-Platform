@@ -56,12 +56,49 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'User not found in database' });
       }
       const packChances = getPaidChancesPack();
-      user.paidChances = (Number(user.paidChances) || 0) + packChances;
+      const priceINR = getPaidChancesPrice();
+      const gameIds = ['path-finder', 'bubble-sort', 'tile-maze'];
+
+      if (!user.paidChances || typeof user.paidChances.get !== 'function') {
+        const initialVal = typeof user.paidChances === 'number' ? user.paidChances : 0;
+        user.paidChances = new Map([
+          ['path-finder', initialVal],
+          ['bubble-sort', initialVal],
+          ['tile-maze', initialVal]
+        ]);
+      }
+
+      for (const gid of gameIds) {
+        const current = Number(user.paidChances.get(gid)) || 0;
+        user.paidChances.set(gid, current + packChances);
+      }
+      user.markModified('paidChances');
+
+      if (!user.payments) user.payments = [];
+      user.payments.push({
+        orderId: `sim_order_${Date.now()}`,
+        paymentId: `sim_pay_${Date.now()}`,
+        amount: priceINR,
+        currency: 'INR',
+        createdAt: new Date(),
+      });
       await user.save();
+
+      const toPlainObject = (container) => {
+        if (!container) return {};
+        if (typeof container.entries === 'function') {
+          return Object.fromEntries(container.entries());
+        }
+        return { ...container };
+      };
+
+      const paidChancesObj = toPlainObject(user.paidChances);
+      const freeChancesObj = toPlainObject(user.freeChances);
+
       return res.status(200).json({
         success: true,
-        paidChances: user.paidChances,
-        freeChances: user.freeChances,
+        paidChances: paidChancesObj,
+        freeChances: freeChancesObj,
         credited: packChances,
         message: `Simulated Recharge: Successfully added ${packChances} plays!`,
       });

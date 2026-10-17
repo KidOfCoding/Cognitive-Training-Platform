@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Operations Center — Cognitive Assessment Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: radial-gradient(circle at 15% 15%, #0f172a 0%, #060913 100%);
+      color: #f1f5f9;
+      min-height: 100vh;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+    }
+    .glass-card-interactive {
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card-interactive:hover {
+      border-color: rgba(56, 189, 248, 0.35);
+      transform: translateY(-2px);
+    }
+    .badge-refund { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; }
+    .badge-bug { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24; }
+    .badge-suggestion { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; }
+    .badge-pending { background: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.3); color: #facc15; }
+    .badge-resolved { background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; }
+    .badge-approved { background: rgba(52, 211, 153, 0.15); border: 1px solid rgba(52, 211, 153, 0.3); color: #34d399; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b1120; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+  </style>
+</head>
+<body class="p-4 md:p-8">
+
+  <!-- PASSWORD LOGIN MODAL -->
+  <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+    <div class="glass-card max-w-md w-full p-8 rounded-2xl text-center shadow-2xl relative border border-cyan-500/30">
+      <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 text-3xl">
+        🛡️
+      </div>
+      <h2 class="text-2xl font-extrabold text-white tracking-tight">Admin Operations</h2>
+      <p class="text-xs text-slate-400 mt-1 mb-6">Restricted access for platform administrators and audit oversight.</p>
+      
+      <form id="admin-login-form" class="space-y-4">
+        <div class="text-left">
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Master Password</label>
+          <input type="password" id="admin-pass-input" required placeholder="Enter admin password..." 
+            class="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition" />
+        </div>
+        <p id="login-error-msg" class="text-xs text-rose-400 hidden"></p>
+        <button type="submit" id="admin-login-btn"
+          class="w-full py-3 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-cyan-500/25 transition">
+          Unlock Operations Dashboard
+        </button>
+        <div class="pt-2">
+          <a href="/welcome.html" class="text-xs text-slate-400 hover:text-cyan-400 transition">← Return to Home Page</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN ADMIN DASHBOARD CONTENT -->
+  <div id="dashboard-content" class="max-w-7xl mx-auto hidden">
+    <!-- Top Bar -->
+    <header class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-800">
+      <div>
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">⚡</span>
+          <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-white">Platform Administration</h1>
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-cyan-950/80 border border-cyan-500/40 text-cyan-400">Live Production</span>
+        </div>
+        <p class="text-xs text-slate-400 mt-1">Live tracking of revenue, registered students, refund grievances, and college addition requests.</p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button id="refresh-data-btn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition flex items-center gap-2">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>Refresh Data</span>
+        </button>
+        <a href="/index.html" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-cyan-400 transition">
+          Player Dashboard →
+        </a>
+        <button id="admin-logout-btn" class="px-4 py-2 rounded-xl bg-rose-950/40 hover:bg-rose-900/50 border border-rose-500/30 text-xs font-semibold text-rose-300 transition">
+          Lock &amp; Exit
+        </button>
+      </div>
+    </header>
+
+    <!-- METRICS GRID -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+      <!-- Total Revenue -->
+      <div class="glass-card glass-card-interactive p-6 rounded-2xl relative overflow-hidden">
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-cyan-500/10 rounded-full blur-xl pointer-events-none"></div>
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Revenue Generated</span>
+          <span class="text-xl">💰</span>
+        </div>
+        <div class="text-3xl font-extrabold text-white tracking-tight mono" id="stat-revenue">₹0</div>
+        <div class="text-[11px] text-emerald-400 mt-2 flex items-center gap-1 font-medium" id="stat-payments-count">
+          <span>● 0 successful transactions</span>
+        </div>
+      </div>
+
+      <!-- Total Users -->
+      <div class="glass-card glass-card-interactive p-6 rounded-2xl relative overflow-hidden">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Registered Students</span>
+          <span class="text-xl">👥</span>
+        </div>
+        <div class="text-3xl font-extrabold text-white tracking-tight mono" id="stat-users">0</div>
+        <div class="text-[11px] text-slate-400 mt-2">Active institution user profiles</div>
+      </div>
+
+      <!-- Grievance & Refunds -->
+      <div class="glass-card glass-card-interactive p-6 rounded-2xl relative overflow-hidden">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Refunds &amp; Grievances</span>
+          <span class="text-xl">🛡️</span>
+        </div>
+        <div class="text-3xl font-extrabold text-white tracking-tight mono" id="stat-grievances">0</div>
+        <div class="text-[11px] text-amber-400 mt-2 font-medium" id="stat-pending-refunds">0 pending review</div>
+      </div>
+
+      <!-- College Addition Requests -->
+      <div class="glass-card glass-card-interactive p-6 rounded-2xl relative overflow-hidden">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">College Requests</span>
+          <span class="text-xl">🏫</span>
+        </div>
+        <div class="text-3xl font-extrabold text-white tracking-tight mono" id="stat-colleges">0</div>
+        <div class="text-[11px] text-cyan-400 mt-2">Pending campus additions</div>
+      </div>
+    </div>
+
+    <!-- TABS NAVIGATION -->
+    <div class="flex border-b border-slate-800 mb-6 gap-2">
+      <button class="admin-tab-btn active px-5 py-3 text-sm font-bold border-b-2 border-cyan-400 text-cyan-400 transition" data-tab="tab-users">
+        👥 Users &amp; Revenue Paid (<span id="tab-users-count">0</span>)
+      </button>
+      <button class="admin-tab-btn px-5 py-3 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition" data-tab="tab-grievances">
+        🛡️ Refund Grievances &amp; Feedback (<span id="tab-grievance-count">0</span>)
+      </button>
+      <button class="admin-tab-btn px-5 py-3 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition" data-tab="tab-colleges">
+        🏫 College Requests (<span id="tab-college-count">0</span>)
+      </button>
+    </div>
+
+    <!-- TAB 1: USERS & PAYMENTS TABLE -->
+    <section id="tab-users" class="admin-tab-content">
+      <div class="glass-card rounded-2xl p-6">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-lg font-bold text-white">Registered Users &amp; Amount Paid</h2>
+            <p class="text-xs text-slate-400">Detailed list of all student accounts, remaining chances, and cumulative revenue paid.</p>
+          </div>
+          <input type="text" id="user-search-input" placeholder="Search user email or name..." 
+            class="px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-full sm:w-72" />
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 uppercase font-semibold">
+                <th class="py-3 px-4">User Email</th>
+                <th class="py-3 px-4">College / Domain</th>
+                <th class="py-3 px-4">Free Left</th>
+                <th class="py-3 px-4">Paid Left</th>
+                <th class="py-3 px-4 text-right">Amount Paid</th>
+                <th class="py-3 px-4 text-center">Transactions</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body" class="divide-y divide-slate-800/60">
+              <tr><td colspan="6" class="text-center py-8 text-slate-500">Loading user records...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: GRIEVANCE & REFUND POLICY TABLE -->
+    <section id="tab-grievances" class="admin-tab-content hidden">
+      <div class="glass-card rounded-2xl p-6">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-lg font-bold text-white">Refund Grievances &amp; User Reports</h2>
+            <p class="text-xs text-slate-400">Claims for irrelevant games, technical bugs, or platform suggestions with photo proof.</p>
+          </div>
+          <!-- Filter Categories -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <button class="grievance-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-cyan-600 text-white" data-filter="all">All</button>
+            <button class="grievance-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700" data-filter="refund_irrelevant">💸 Refund / Irrelevant</button>
+            <button class="grievance-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700" data-filter="bug_issue">🐛 Bug / Issue</button>
+            <button class="grievance-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700" data-filter="suggestion">💡 Suggestions</button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 uppercase font-semibold">
+                <th class="py-3 px-4">Date</th>
+                <th class="py-3 px-4">User Email</th>
+                <th class="py-3 px-4">Category</th>
+                <th class="py-3 px-4">Subject &amp; Reason</th>
+                <th class="py-3 px-4 text-center">Photo Proof</th>
+                <th class="py-3 px-4 text-center">Status</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="grievance-table-body" class="divide-y divide-slate-800/60">
+              <tr><td colspan="7" class="text-center py-8 text-slate-500">Loading grievances...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: COLLEGE REQUESTS TABLE -->
+    <section id="tab-colleges" class="admin-tab-content hidden">
+      <div class="glass-card rounded-2xl p-6">
+        <div class="mb-6">
+          <h2 class="text-lg font-bold text-white">College Addition Requests</h2>
+          <p class="text-xs text-slate-400">Institutions requested by students that are currently restricted by policy.</p>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 uppercase font-semibold">
+                <th class="py-3 px-4">Date</th>
+                <th class="py-3 px-4">Student Email</th>
+                <th class="py-3 px-4">Requested College</th>
+                <th class="py-3 px-4">Domain</th>
+                <th class="py-3 px-4">Notes</th>
+                <th class="py-3 px-4 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody id="colleges-table-body" class="divide-y divide-slate-800/60">
+              <tr><td colspan="6" class="text-center py-8 text-slate-500">Loading college requests...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- PHOTO PROOF PREVIEW MODAL -->
+  <div id="image-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 hidden">
+    <div class="max-w-3xl w-full p-4 text-center relative">
+      <button id="close-image-modal" class="absolute top-2 right-2 text-white bg-slate-800 hover:bg-slate-700 p-2 rounded-full font-bold">✕</button>
+      <img id="image-modal-img" src="" alt="Proof Preview" class="max-h-[80vh] mx-auto rounded-xl shadow-2xl border border-slate-700" />
+      <p id="image-modal-caption" class="text-xs text-slate-300 mt-3"></p>
+    </div>
+  </div>
+
+  <!-- PAYMENT HISTORY MODAL -->
+  <div id="payment-history-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 hidden">
+    <div class="glass-card max-w-lg w-full p-6 rounded-2xl relative">
+      <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
+        <div>
+          <h3 class="font-bold text-white text-base">Payment History</h3>
+          <p id="ph-user-email" class="text-xs text-slate-400"></p>
+        </div>
+        <button id="close-payment-history" class="text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800 text-xs font-bold">✕</button>
+      </div>
+      <div id="ph-list" class="space-y-2.5 max-h-72 overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <script>
+    let currentAdminPassword = sessionStorage.getItem('cognitive_admin_pwd') || '';
+    let globalData = null;
+
+    const loginModal = document.getElementById('login-modal');
+    const dashboardContent = document.getElementById('dashboard-content');
+    const loginForm = document.getElementById('admin-login-form');
+    const passInput = document.getElementById('admin-pass-input');
+    const loginError = document.getElementById('login-error-msg');
+    const logoutBtn = document.getElementById('admin-logout-btn');
+    const refreshBtn = document.getElementById('refresh-data-btn');
+
+    // Tab Navigation
+    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.admin-tab-btn').forEach(b => {
+          b.classList.remove('active', 'border-cyan-400', 'text-cyan-400');
+          b.classList.add('border-transparent', 'text-slate-400');
+        });
+        btn.classList.add('active', 'border-cyan-400', 'text-cyan-400');
+        btn.classList.remove('border-transparent', 'text-slate-400');
+
+        const target = btn.getAttribute('data-tab');
+        document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.add('hidden'));
+        document.getElementById(target)?.classList.remove('hidden');
+      });
+    });
+
+    async function fetchAdminData(pwd) {
+      try {
+        const res = await fetch('/api/admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-password': pwd,
+          },
+          body: JSON.stringify({ password: pwd }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.authenticated) {
+          throw new Error(data.error || 'Authentication rejected');
+        }
+
+        currentAdminPassword = pwd;
+        sessionStorage.setItem('cognitive_admin_pwd', pwd);
+        globalData = data;
+        renderDashboard(data);
+        loginModal.classList.add('hidden');
+        dashboardContent.classList.remove('hidden');
+      } catch (err) {
+        sessionStorage.removeItem('cognitive_admin_pwd');
+        loginError.textContent = err.message || 'Incorrect password.';
+        loginError.classList.remove('hidden');
+        loginModal.classList.remove('hidden');
+        dashboardContent.classList.add('hidden');
+      }
+    }
+
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      loginError.classList.add('hidden');
+      fetchAdminData(passInput.value.trim());
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      sessionStorage.removeItem('cognitive_admin_pwd');
+      window.location.reload();
+    });
+
+    refreshBtn.addEventListener('click', () => {
+      if (currentAdminPassword) fetchAdminData(currentAdminPassword);
+    });
+
+    // Auto-login if session password exists
+    if (currentAdminPassword) {
+      fetchAdminData(currentAdminPassword);
+    }
+
+    function renderDashboard(data) {
+      const stats = data.stats || {};
+      document.getElementById('stat-revenue').textContent = `₹${Number(stats.totalRevenue || 0).toLocaleString('en-IN')}`;
+      document.getElementById('stat-payments-count').textContent = `● ${stats.totalPaymentsCount || 0} completed purchases`;
+      document.getElementById('stat-users').textContent = stats.totalUsers || 0;
+      document.getElementById('stat-grievances').textContent = stats.totalGrievances || 0;
+      document.getElementById('stat-pending-refunds').textContent = `${stats.pendingRefunds || 0} pending refund review`;
+      document.getElementById('stat-colleges').textContent = stats.totalCollegeRequests || 0;
+
+      document.getElementById('tab-users-count').textContent = (data.users || []).length;
+      document.getElementById('tab-grievance-count').textContent = (data.grievances || []).length;
+      document.getElementById('tab-college-count').textContent = (data.collegeRequests || []).length;
+
+      renderUsersTable(data.users || []);
+      renderGrievancesTable(data.grievances || []);
+      renderCollegesTable(data.collegeRequests || []);
+    }
+
+    function renderUsersTable(users) {
+      const tbody = document.getElementById('users-table-body');
+      if (!users.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">No users registered yet.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = users.map((u, idx) => {
+        const domain = u.email.includes('@') ? u.email.split('@')[1] : 'N/A';
+        const freeSum = Object.values(u.freeChances || {}).reduce((a, b) => Number(a) + Number(b), 0);
+        const paidSum = Object.values(u.paidChances || {}).reduce((a, b) => Number(a) + Number(b), 0);
+        const paidAmt = Number(u.totalPaid) || 0;
+        const paymentsCount = (u.payments || []).length;
+
+        return `
+          <tr class="hover:bg-slate-900/60 transition">
+            <td class="py-3 px-4">
+              <div class="font-semibold text-white">${u.email}</div>
+              <div class="text-[10px] text-slate-500 mono">${u.clerkUserId}</div>
+            </td>
+            <td class="py-3 px-4">
+              <span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 text-[11px]">${domain}</span>
+            </td>
+            <td class="py-3 px-4">
+              <span class="text-cyan-400 font-semibold">${freeSum}</span>
+            </td>
+            <td class="py-3 px-4">
+              <span class="text-emerald-400 font-semibold">${paidSum}</span>
+            </td>
+            <td class="py-3 px-4 text-right">
+              <span class="font-bold text-white mono ${paidAmt > 0 ? 'text-emerald-400' : 'text-slate-400'}">₹${paidAmt.toLocaleString('en-IN')}</span>
+            </td>
+            <td class="py-3 px-4 text-center">
+              ${paymentsCount > 0 
+                ? `<button class="px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-900/80 transition text-[11px] font-bold" onclick="showPaymentHistory('${u.email}', ${idx})">
+                    ${paymentsCount} Paid 📜
+                   </button>`
+                : `<span class="text-slate-600 text-[11px]">Free Tier</span>`
+              }
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // User Search Filter
+    document.getElementById('user-search-input')?.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      if (!globalData || !globalData.users) return;
+      const filtered = globalData.users.filter(u => u.email.toLowerCase().includes(query) || (u.name && u.name.toLowerCase().includes(query)));
+      renderUsersTable(filtered);
+    });
+
+    // Render Grievances
+    let activeGrievanceFilter = 'all';
+    function renderGrievancesTable(grievances) {
+      const tbody = document.getElementById('grievance-table-body');
+      const filtered = activeGrievanceFilter === 'all' 
+        ? grievances 
+        : grievances.filter(g => g.category === activeGrievanceFilter);
+
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">No submissions found in this category.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(g => {
+        const catMap = {
+          'refund_irrelevant': { label: '💸 Refund / Irrelevant', badge: 'badge-refund' },
+          'bug_issue': { label: '🐛 Bug / Issue', badge: 'badge-bug' },
+          'suggestion': { label: '💡 Suggestion', badge: 'badge-suggestion' }
+        };
+        const catInfo = catMap[g.category] || { label: g.category, badge: 'badge-pending' };
+        const dateStr = g.createdAt ? new Date(g.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+
+        return `
+          <tr class="hover:bg-slate-900/60 transition">
+            <td class="py-3 px-4 text-slate-400 whitespace-nowrap text-[11px]">${dateStr}</td>
+            <td class="py-3 px-4 font-semibold text-white">${g.email}</td>
+            <td class="py-3 px-4">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${catInfo.badge}">${catInfo.label}</span>
+            </td>
+            <td class="py-3 px-4 max-w-xs">
+              <div class="font-bold text-white truncate">${g.subject}</div>
+              <div class="text-[11px] text-slate-300 leading-tight mt-0.5 line-clamp-2">${g.description}</div>
+            </td>
+            <td class="py-3 px-4 text-center">
+              ${g.photoUrl 
+                ? `<button type="button" class="px-2 py-1 bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 rounded text-[11px] hover:bg-cyan-900 font-semibold" onclick="viewPhoto('${g.photoUrl}', '${g.subject.replace(/'/g, "\\'")}')">🖼️ View Proof</button>` 
+                : `<span class="text-slate-600 text-[11px]">No Photo</span>`
+              }
+            </td>
+            <td class="py-3 px-4 text-center">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${g.status === 'resolved' || g.status === 'refunded' ? 'badge-resolved' : 'badge-pending'}">${g.status.toUpperCase()}</span>
+            </td>
+            <td class="py-3 px-4 text-right whitespace-nowrap space-x-1">
+              ${g.status === 'pending' ? `
+                <button onclick="updateGrievanceStatus('${g._id}', 'refunded')" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10.5px] font-bold">Refunded</button>
+                <button onclick="updateGrievanceStatus('${g._id}', 'resolved')" class="px-2 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded text-[10.5px] font-bold">Resolved</button>
+              ` : `<span class="text-[10px] text-slate-500">Completed</span>`}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    document.querySelectorAll('.grievance-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.grievance-filter-btn').forEach(b => {
+          b.classList.remove('bg-cyan-600', 'text-white');
+          b.classList.add('bg-slate-800', 'text-slate-300');
+        });
+        btn.classList.add('bg-cyan-600', 'text-white');
+        btn.classList.remove('bg-slate-800', 'text-slate-300');
+        activeGrievanceFilter = btn.getAttribute('data-filter');
+        if (globalData) renderGrievancesTable(globalData.grievances || []);
+      });
+    });
+
+    async function updateGrievanceStatus(id, newStatus) {
+      if (!confirm(`Mark this grievance as ${newStatus}?`)) return;
+      try {
+        const res = await fetch('/api/grievance', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status: newStatus }),
+        });
+        if (res.ok) {
+          fetchAdminData(currentAdminPassword);
+        }
+      } catch (e) {
+        alert('Error updating status');
+      }
+    }
+
+    // Render Colleges
+    function renderCollegesTable(requests) {
+      const tbody = document.getElementById('colleges-table-body');
+      if (!requests.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">No college requests submitted yet.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = requests.map(c => {
+        const dateStr = c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : 'N/A';
+        return `
+          <tr class="hover:bg-slate-900/60 transition">
+            <td class="py-3 px-4 text-slate-400 text-[11px]">${dateStr}</td>
+            <td class="py-3 px-4 font-semibold text-white">${c.email}</td>
+            <td class="py-3 px-4 text-cyan-300 font-bold">${c.collegeName}</td>
+            <td class="py-3 px-4 mono text-slate-300">${c.domain || 'N/A'}</td>
+            <td class="py-3 px-4 text-slate-400 text-[11px]">${c.notes || '—'}</td>
+            <td class="py-3 px-4 text-center">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${c.status === 'approved' ? 'badge-approved' : 'badge-pending'}">${c.status.toUpperCase()}</span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Image Modal
+    window.viewPhoto = function(url, caption) {
+      document.getElementById('image-modal-img').src = url;
+      document.getElementById('image-modal-caption').textContent = caption;
+      document.getElementById('image-modal').classList.remove('hidden');
+    };
+    document.getElementById('close-image-modal')?.addEventListener('click', () => {
+      document.getElementById('image-modal').classList.add('hidden');
+    });
+
+    // Payment History Modal
+    window.showPaymentHistory = function(email, userIdx) {
+      const user = globalData.users[userIdx];
+      if (!user) return;
+      document.getElementById('ph-user-email').textContent = email;
+      const listEl = document.getElementById('ph-list');
+      const payments = user.payments || [];
+
+      if (!payments.length) {
+        listEl.innerHTML = `<p class="text-xs text-slate-500 py-4 text-center">No payment transactions recorded.</p>`;
+      } else {
+        listEl.innerHTML = payments.map(p => {
+          const date = p.createdAt ? new Date(p.createdAt).toLocaleString('en-IN') : 'N/A';
+          return `
+            <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between text-xs">
+              <div>
+                <div class="font-bold text-white mono">₹${Number(p.amount || 0).toLocaleString('en-IN')} ${p.currency || 'INR'}</div>
+                <div class="text-[10px] text-slate-400 mt-0.5">${date}</div>
+                <div class="text-[9px] text-slate-500 mono mt-0.5">PayID: ${p.paymentId || 'N/A'}</div>
+              </div>
+              <span class="px-2 py-0.5 bg-emerald-950 border border-emerald-500/40 text-emerald-300 rounded text-[10px] font-bold">PAID</span>
+            </div>
+          `;
+        }).join('');
+      }
+      document.getElementById('payment-history-modal').classList.remove('hidden');
+    };
+
+    document.getElementById('close-payment-history')?.addEventListener('click', () => {
+      document.getElementById('payment-history-modal').classList.add('hidden');
+    });
+  </script>
+</body>
+</html>

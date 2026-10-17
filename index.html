@@ -352,11 +352,6 @@
         <div>
           <div class="flex items-center gap-2 mb-1">
             <h1 class="sidebar-title">Cognitive Games</h1>
-            <a href="/welcome.html"
-              class="text-[11px] px-2 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 hover:text-cyan-300 hover:border-cyan-400 font-semibold transition"
-              title="Return to platform landing page">
-              ← Overview
-            </a>
           </div>
           <p class="sidebar-subtitle">Select an assessment to begin</p>
         </div>
@@ -405,7 +400,15 @@
       </div>
 
       <!-- Game list (populated by JS) -->
-      <nav id="game-list" aria-label="Game selection"></nav>
+      <nav id="game-list" aria-label="Game selection" class="flex-1"></nav>
+
+      <!-- Minimal, sleek bottom refund/grievance action -->
+      <div class="p-3 border-t border-white/5 mt-auto">
+        <button type="button" id="sidebar-grievance-btn" class="w-full py-2 px-3 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-700/50 hover:border-cyan-500/30 text-slate-400 hover:text-cyan-300 font-medium text-xs transition flex items-center justify-center gap-2">
+          <span>🛡️</span>
+          <span>Refund Policy &amp; Grievances</span>
+        </button>
+      </div>
     </aside>
 
     <!-- Main content -->
@@ -832,6 +835,7 @@
       window.lucide.createIcons();
     }
   </script>
+  <script src="/shared/grievance_modal.js"></script>
   <script type="module" src="/main.js"></script>
 </body>
 

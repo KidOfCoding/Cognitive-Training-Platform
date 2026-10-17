@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@clerk/clerk-js": "^5.1.0",
+    "cloudinary": "^2.11.0",
     "dotenv": "^17.2.3",
     "mongoose": "^9.11.0",
     "razorpay": "^2.9.8"

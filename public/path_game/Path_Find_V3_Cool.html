@@ -728,7 +728,7 @@
     <div id="recharge-modal" class="modal-overlay">
         <div class="modal-card">
             <div class="text-4xl mb-3">⚡</div>
-            <h2 class="text-xl font-bold text-white mb-2">No Chances Available</h2>
+            <h2 id="recharge-modal-title" class="text-xl font-bold text-white mb-2">No Chances Available</h2>
             <p id="recharge-notice-text" class="text-slate-300 text-sm mb-6">You have exhausted all chances for Dynamic Memory Path. Please recharge your account to start a new level!</p>
             <div class="flex justify-center gap-4">
                 <button id="recharge-modal-buy" class="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-semibold text-sm rounded-xl shadow transition">⚡ Add Chances / Top Up</button>
@@ -784,7 +784,7 @@
                 const hostWin = getHostWindow();
                 if (!hostWin) {
                     isDeductingPlay = false;
-                    showNoChancesNotice('Please launch this assessment from your authenticated dashboard.');
+                    showNoChancesNotice('Please launch this assessment from your authenticated dashboard.', 'Dashboard Launch Required');
                     resolve(false);
                     return;
                 }
@@ -795,10 +795,18 @@
                         finished = true;
                         window.removeEventListener('message', handler);
                         isDeductingPlay = false;
-                        showNoChancesNotice('Session timeout. Please return to dashboard or recharge.');
-                        resolve(false);
+                        const currentCount = playsLeftCount ? parseInt(playsLeftCount.textContent, 10) : 0;
+                        if (!isNaN(currentCount) && currentCount > 0) {
+                            // User has verified remaining chances; grant access optimistically
+                            hasDeductedThisRound = true;
+                            if (playsLeftCount) playsLeftCount.textContent = Math.max(0, currentCount - 1);
+                            resolve(true);
+                        } else {
+                            showNoChancesNotice('Network verification timed out. Please check your internet or retry.', 'Connection Timeout');
+                            resolve(false);
+                        }
                     }
-                }, 2500);
+                }, 12000);
 
                 const handler = (event) => {
                     if (!event.data || typeof event.data !== 'object') return;
@@ -818,7 +826,7 @@
                         clearTimeout(timeout);
                         window.removeEventListener('message', handler);
                         isDeductingPlay = false;
-                        showNoChancesNotice(event.data.message || 'No chances left. Please recharge to play!');
+                        showNoChancesNotice(event.data.message || 'No chances left. Please recharge to play!', 'No Chances Available');
                         resolve(false);
                     }
                 };
@@ -867,10 +875,14 @@
             }
         } catch (e) {}
 
-        function showNoChancesNotice(msg) {
+        function showNoChancesNotice(msg, title = 'No Chances Available') {
+            const titleEl = document.getElementById('recharge-modal-title');
+            if (titleEl) titleEl.textContent = title;
             if (rechargeNoticeText) {
                 rechargeNoticeText.textContent = msg || 'You have exhausted your available chances for Dynamic Memory Path. Please recharge!';
             }
+            rechargeModal.classList.add('active');
+        }
             rechargeModal.classList.add('active');
         }
 

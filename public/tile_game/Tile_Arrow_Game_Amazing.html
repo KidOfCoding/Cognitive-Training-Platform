@@ -864,7 +864,7 @@
             <div
                 class="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-2xl mx-auto mb-3">
                 ⚡</div>
-            <h2 class="text-lg font-bold text-white mb-1.5">No Chances Available</h2>
+            <h2 id="recharge-modal-title" class="text-lg font-bold text-white mb-1.5">No Chances Available</h2>
             <p id="recharge-notice-text" class="text-slate-300 text-xs leading-relaxed mb-5">You have exhausted all
                 chances for PathFinder Mouse. Please recharge your account to start a new game!</p>
             <div class="flex justify-center gap-3">
@@ -941,10 +941,17 @@
                             finished = true;
                             window.removeEventListener('message', handler);
                             isDeductingPlay = false;
-                            showNoChancesNotice('Session timeout. Please return to dashboard or recharge.');
-                            resolve(false);
+                            const currentCount = playsLeftCount ? parseInt(playsLeftCount.textContent, 10) : 0;
+                            if (!isNaN(currentCount) && currentCount > 0) {
+                                hasDeductedThisRound = true;
+                                if (playsLeftCount) playsLeftCount.textContent = Math.max(0, currentCount - 1);
+                                resolve(true);
+                            } else {
+                                showNoChancesNotice('Network verification timed out. Please check your internet or retry.', 'Connection Timeout');
+                                resolve(false);
+                            }
                         }
-                    }, 2500);
+                    }, 12000);
 
                     const handler = (event) => {
                         if (!event.data || typeof event.data !== 'object') return;
@@ -1016,7 +1023,9 @@
                 if (hostWin) hostWin.postMessage({ type: 'GET_GAME_SESSION_INFO', gameId: 'tile-maze' }, '*');
             } catch (e) { }
 
-            function showNoChancesNotice(msg) {
+            function showNoChancesNotice(msg, title = 'No Chances Available') {
+                const titleEl = document.getElementById('recharge-modal-title');
+                if (titleEl) titleEl.textContent = title;
                 if (rechargeNoticeText) {
                     rechargeNoticeText.textContent = msg || 'You have exhausted your available chances. Please recharge!';
                 }

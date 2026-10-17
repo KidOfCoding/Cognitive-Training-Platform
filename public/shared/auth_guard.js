@@ -169,11 +169,13 @@
 
   function createLockOverlay(title = 'Authentication Required', message = '', isOffline = false) {
     let overlay = document.getElementById('cognitive-auth-lock-overlay');
-    const badgeText = isOffline ? 'Offline Play Prohibited' : 'Institutional Access Required';
+    const badgeText = isOffline ? 'Internet Connection Required' : 'Institutional Access Required';
     const icon = isOffline ? '📡' : '🔒';
     const descText = message || (isOffline
-      ? 'Assessments cannot run offline or from downloaded files. You must connect to the internet and access through your authenticated dashboard.'
+      ? 'Assessments require an active internet connection. Offline play and downloaded files are strictly prohibited.'
       : 'You must be signed in with your verified college or university email address to access cognitive assessment games.');
+
+    const returnUrl = '/index.html';
 
     if (!overlay) {
       overlay = document.createElement('div');
@@ -184,15 +186,36 @@
           <div class="auth-lock-pill" id="auth-lock-badge">${badgeText}</div>
           <h2 class="auth-lock-title" id="auth-lock-title">${title}</h2>
           <p class="auth-lock-subtitle" id="auth-lock-desc">${descText}</p>
-          <a class="auth-lock-btn auth-lock-btn-primary" href="https://cognitive-training-platform.vercel.app/index.html">
-            <span>Open Online Dashboard</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
-          </a>
+          <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            ${isOffline ? `
+            <button type="button" id="auth-lock-retry-btn" class="auth-lock-btn auth-lock-btn-primary" style="cursor: pointer; border: none; background: linear-gradient(135deg, #06b6d4, #3b82f6);">
+              <span>⚡ Retry Connection</span>
+            </button>
+            ` : ''}
+            <a class="auth-lock-btn ${isOffline ? 'auth-lock-btn-secondary' : 'auth-lock-btn-primary'}" 
+               href="${returnUrl}" 
+               target="_top" 
+               onclick="if (window.top && window.top !== window) { window.top.location.href = '${returnUrl}'; return false; }">
+              <span>Return to Dashboard</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+          </div>
         </div>
       `;
       document.documentElement.appendChild(overlay);
+
+      const retryBtn = overlay.querySelector('#auth-lock-retry-btn');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', () => {
+          if (navigator.onLine) {
+            runGuard();
+          } else {
+            alert('Internet is still offline. Please verify your connection.');
+          }
+        });
+      }
     } else {
       const titleEl = document.getElementById('auth-lock-title');
       const descEl = document.getElementById('auth-lock-desc');
@@ -235,6 +258,16 @@
   window.addEventListener('offline', () => {
     neutralizeGameElements();
     createLockOverlay('Internet Connection Lost', 'Assessment paused. Playing offline is strictly forbidden. Please reconnect to continue.', true);
+  });
+
+  // Real-time online recovery: when connection restores, re-verify and reload smoothly
+  window.addEventListener('online', () => {
+    if (isEmbeddedInHost()) {
+      // embedded in dashboard - re-handshake
+      runGuard();
+    } else {
+      window.location.reload();
+    }
   });
 
   // Check if embedded in parent dashboard
