@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dynamic Memory Path — Cognitive Grid Assessment</title>
+    <script src="/shared/auth_guard.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/shared/game_demo.css">
@@ -585,7 +586,7 @@
 
                 <div id="session-plays-badge" class="px-2.5 py-1.5 bg-emerald-950/80 border border-emerald-500/40 rounded-xl text-xs text-emerald-400 font-semibold flex items-center gap-1.5 shadow">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>Chances: <strong id="plays-left-count" class="font-mono text-emerald-300">10</strong></span>
+                    <span>Chances: <strong id="plays-left-count" class="font-mono text-emerald-300">0</strong></span>
                 </div>
             </div>
 
@@ -782,9 +783,9 @@
             return new Promise((resolve) => {
                 const hostWin = getHostWindow();
                 if (!hostWin) {
-                    hasDeductedThisRound = true;
                     isDeductingPlay = false;
-                    resolve(true);
+                    showNoChancesNotice('Please launch this assessment from your authenticated dashboard.');
+                    resolve(false);
                     return;
                 }
 
@@ -793,9 +794,9 @@
                     if (!finished) {
                         finished = true;
                         window.removeEventListener('message', handler);
-                        hasDeductedThisRound = true;
                         isDeductingPlay = false;
-                        resolve(true);
+                        showNoChancesNotice('Session timeout. Please return to dashboard or recharge.');
+                        resolve(false);
                     }
                 }, 2500);
 

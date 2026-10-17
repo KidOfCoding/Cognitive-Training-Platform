@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Math Bubble Sort Game — Cognitive Assessment</title>
+    <script src="/shared/auth_guard.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -734,10 +735,17 @@
             <!-- Row 2: Controls Toolbar (Always below as default, zero fluctuating) -->
             <div class="header-controls-row">
                 <div class="controls-cluster">
+                    <a href="/index.html" id="back-to-dashboard-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-slate-700/80 transition-all shadow-sm">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        <span>Dashboard</span>
+                    </a>
+
                     <!-- Session Chances Badge -->
                     <div id="session-plays-badge" class="chances-pill" title="Available assessment chances">
                         <span class="dot"></span>
-                        <span>Chances: <strong id="plays-left-count">10</strong></span>
+                        <span>Chances: <strong id="plays-left-count">0</strong></span>
                     </div>
 
                     <!-- New Game Button -->
@@ -1246,14 +1254,11 @@
                 });
             } else {
                 isDeductingPlay = false;
-                hasDeductedThisRound = true;
-                if (playsLeftCount) {
-                    const cur = parseInt(playsLeftCount.textContent, 10);
-                    if (!isNaN(cur) && cur > 0) {
-                        playsLeftCount.textContent = cur - 1;
-                    }
+                if (messageElement) {
+                    messageElement.textContent = '⚠️ Please launch this assessment from your authenticated dashboard.';
+                    messageElement.className = 'feedback-msg text-rose-400';
                 }
-                callback(true);
+                callback(false);
             }
         }
 

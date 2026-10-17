@@ -1227,8 +1227,8 @@
         if (!resolved) {
           resolved = true;
           window.removeEventListener('message', msgHandler);
-          // Fallback allow if parent/opener is not listening
-          onGranted && onGranted({ standalone: true });
+          // Do not allow unauthenticated/unconnected play
+          onDenied && onDenied({ message: 'Session connection timed out. Please play from your logged-in dashboard.' });
         }
       }, 2000);
 
@@ -1250,8 +1250,8 @@
       window.addEventListener('message', msgHandler);
       parentOrOpener.postMessage({ type: 'REQUEST_NEW_GAME', gameId }, '*');
     } else {
-      // Standalone mode: allow new game locally
-      onGranted && onGranted({ standalone: true });
+      // Standalone mode: strictly require logged in parent dashboard
+      onDenied && onDenied({ message: 'Please sign in and launch this assessment from your dashboard.' });
     }
   };
 
